@@ -1,0 +1,36 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+description = '''
+${mod_description}
+'''
+
+[[dependencies.${mod_id}]]
+    modId = "forge"
+    mandatory = true
+    versionRange = "${forge_version_range}"
+    ordering = "NONE"
+    side = "BOTH"
+
+[[dependencies.${mod_id}]]
+    modId = "minecraft"
+    mandatory = true
+    versionRange = "${minecraft_version_range}"
+    ordering = "NONE"
+    side = "BOTH"
+
+# 车万女仆：唯一的前置。声明为 mandatory 是因为本模组的一切都建立在它的 api 包上；
+# 但代码层面所有 TLM 类型都只出现在 @LittleMaidExtension 注解过的类里，
+# 未装 TLM 时这些类不会被加载 —— 见 compat/LittleMaidCompat.java 的注释。
+[[dependencies.${mod_id}]]
+    modId = "touhou_little_maid"
+    mandatory = true
+    versionRange = "${tlm_version_range}"
+    ordering = "AFTER"
+    side = "BOTH"

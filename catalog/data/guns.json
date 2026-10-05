@@ -1,0 +1,674 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "_research/guns-gap-analysis.md（证据：TaCZ 1.1.7-hotfix2 反编译 638 个 .java + TLM compat/gun/** 源码 + javap 逐类比对）",
+  "operations": [
+    {
+      "id": "tacz:shoot",
+      "kind": "family",
+      "cooldownTicks": 20,
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "开火",
+        "en_us": "Shoot"
+      },
+      "summary": {
+        "zh_cn": "★ 与旧判断相反：TaCZ 把 IGunOperator 用 Mixin 注入到 net.minecraft.world.entity.LivingEntity（基类，不是 Player），所以开火对女仆是服务端可直接调的公开 API。女仆唯一的限制是「输入通道」而不是「能力」。"
+      },
+      "params": {
+        "fireMode": {
+          "values": [
+            "AUTO",
+            "SEMI",
+            "BURST"
+          ],
+          "note": {
+            "zh_cn": "★ 存在物品 NBT 键 GunFireMode（GunItemDataAccessor）。AUTO = 2 tick 冷却；SEMI / BURST = 10+rand(5) tick。⚠️ 不要误判 BURST 为缺口：ModernKineticGunScriptAPI.shootOnce 内部用 CycleTaskHelper.addCycleTask(period, cycles=burstData.getCount()) 完成整轮连发 ⇒ 一次 shoot() 就打完整轮三连发。"
+          }
+        },
+        "gunType": {
+          "ref": "com.tacz.guns.resource.index.CommonGunIndex#getType()（CommonGunIndex$Type 枚举）",
+          "values": [
+            "pistol",
+            "rifle",
+            "smg",
+            "shotgun",
+            "sniper",
+            "mg",
+            "rpg"
+          ],
+          "count": 7,
+          "note": {
+            "zh_cn": "★★ 枪型是【物品数据决定】的有界参数（7 种），且 TLM 自己也按它分支（TacInnerCompat.java:40-64：sniper→64 格、shotgun/pistol/smg→32、rifle/mg/rpg→48）⇒ 这是 A 档参数化的第二个实例。★ 决策含义：同型的两把枪（如两把步枪）落进同一个 gunType ⇒ 战术等价 ⇒ 落到 C 档（随机取一个）。见 docs/09 §4.5.2"
+          }
+        }
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "★ 主手必须是 TaCZ 的 IGun 实现。TLM 只认主手，副手/背包/Curios 里的枪会被忽略"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "AMMO"
+        },
+        {
+          "type": "COOLDOWN",
+          "note": {
+            "zh_cn": "由枪的 GunData 决定；AUTO=2 tick，SEMI/BURST=10+rand(5)"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "INSTANT"
+      },
+      "durationOverrides": {
+        "SEMI": {
+          "kind": "INSTANT",
+          "note": {
+            "zh_cn": "一次 shoot() = 一发。★ 换弹语义（委托方规格）：**用完了再换**，不预先补满。"
+          }
+        },
+        "BURST": {
+          "kind": "COMMIT",
+          "ticks": 12,
+          "note": {
+            "zh_cn": "★ 一次 shoot() 内部就完成整轮三连发（CycleTaskHelper.addCycleTask(period, cycles=burstData.getCount())）⇒ 单位是「一轮连发」，不是「一发」。ticks 取 10+rand(5) 的名义值。"
+          }
+        },
+        "AUTO": {
+          "kind": "COMMIT",
+          "ticks": 60,
+          "note": {
+            "zh_cn": "★★ 单位 = **一梭子打完**（委托方规格：步枪/冲锋枪）。不是 CHANNEL —— 女仆不必「按住」，她承诺打完这个弹匣。★ 换弹**自动**：动作结束即自动换好；若启动时发现弹匣不满则先换弹。⚠️ ticks=60 只是【名义估计】（弹匣大小与射速是每把枪的数据）⇒ **真正的结束由执行器回报**（DecisionCycle.notifyCompleted()），tick 数仅作防卡死兜底。"
+          }
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ IGunOperator.fromLivingEntity(maid).shoot(() -> pitch, () -> yaw) —— 必须用「两参版」；用错重载会因 SERVER_SHOOT_NETWORK_V 判 NETWORK_FAIL。实现见 TLM compat/gun/tacz/TacInnerCompat.java:88-89（这一层已与运行 jar 逐类 javap 比对一致）",
+      "existingImpl": "TLM TaskGunAttack 已实现",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator.java:14-16",
+          "note": "★ fromLivingEntity(e) 的实现就是 (IGunOperator) e 强转 —— Mixin 注入到 LivingEntity"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/tacz/TacInnerCompat.java:88-89",
+          "note": "TLM 的两参 shoot 调用"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/common/GunCommonUtil.java:19-25",
+          "note": "只有加载了 tacz 或 superbwarfare 才注册 gun_attack 任务"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/common/ai/GunShootTargetTask + TacInnerCompat.java:36-38（isGun = getItem() instanceof IGun）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 之前 `docs/01` §7 把枪械标为「退化：只有 1 条动作」——那是对 TLM 现状的正确描述，但对**可达性**的判断是错的：TaCZ 侧 10 个操作的 API 全部对 LivingEntity 开放，只是 TLM 只调了其中 4 个。\n\n★★ 2026-09-30：【删除】了原来的 custom 前置「弹药必须在女仆自己的 getAvailableInv(true) 里（IAmmo.isAmmoOfGun）」。理由两条：① 前置条件里的 custom 是 **fail-closed**（没被显式喂进来就判不满足），而游戏侧此前喂的是空表 ⇒ **「枪械开火」在游戏里永远拿不到**（连执行器已实现也没用）；② 这条判据**本质上属于执行时** —— 能不能开火取决于枪里有没有弹、是不是在换弹、保险关没关，那些是 `GunCommonUtil.performGunAttack` 自己会判断的事。⇒ 按「执行器只回答怎么做，做不了要回报」的原则降级为**执行时判定**（打不出来回报 UNAVAILABLE，可见于 debug 日志）。★ 待办：若将来要按「有弹/没弹」做战术权衡（没弹就优先换弹），应做成**资源量**（resources 里的 ammo 数）而不是布尔前置。"
+      }
+    },
+    {
+      "id": "tacz:aim",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "ADS 瞄准",
+        "en_us": "Aim Down Sights"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "note": {
+          "zh_cn": "按住持续（HOLD_TO_AIM 默认 true）；调用 aim(true/false) 切换"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "降低散布；狙击枪会先瞄准再开火"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).aim(boolean)",
+      "existingImpl": "⚠️ TLM 已调用，但**尺度用错**：判据是 distance > getRestrictRadius()（默认 8）——正确应为 searchRadius（64）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "compat/gun/tacz/TacInnerCompat.java:86",
+          "note": "★★ 用 getRestrictRadius() 当远近距离阈值，而 GunAttackStrafingTask.java:45 的注释写「（128）」⇒ 注释与实现不符"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/passive/EntityMaid.java:421",
+          "note": "MAID_NON_HOME_RANGE 默认 8"
+        },
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator#aim(boolean)"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 这是一个**已定位的 TLM 缺陷**，不是「缺功能」：非狙击枪几乎不会 ADS（因为 8 格阈值太小）。修正后才是真正「类玩家」。"
+      },
+      "role": "stance"
+    },
+    {
+      "id": "tacz:reload",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "换弹"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem"
+        },
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "canReload 守卫 + 背包里有匹配弹药"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "AMMO"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "note": {
+          "zh_cn": "时长由枪的 reloadData.cooldown.emptyTime 决定"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).reload()",
+      "existingImpl": "⚠️ TLM 只在「打空后（NO_AMMO）」才自动换弹 ⇒ **女仆不能主动补弹**（玩家有 R 键 + 自动换弹两条路）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧：key.tacz.reload（R=82）点击 + AUTO_RELOAD 每 5 tick"
+        },
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator#reload()"
+        }
+      ],
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:cancel_reload",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "取消换弹"
+      },
+      "stateReq": [
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "仅在换弹进行中可用"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).cancelReload()",
+      "existingImpl": "❌ 零调用（TLM 从未调用）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧无键位：冲刺时 / 尝试开火时自动触发 PlayerCancelReload"
+        },
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator#cancelReload()"
+        }
+      ],
+      "note": {
+        "zh_cn": "成本极低，且是「贴身后还在傻站着换弹」的直接解药。"
+      },
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:bolt",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "拉栓"
+      },
+      "stateReq": [
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "NEED_BOLT 状态"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "note": {
+          "zh_cn": "boltActionTime"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).bolt()",
+      "existingImpl": "⚠️ TLM 只在 NEED_BOLT 后被动触发；玩家侧每 tick 自动 + NEED_BOLT 时自动 ⇒ 女仆少了「主动拉栓」",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator#bolt()"
+        }
+      ],
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:draw",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "掏枪 / 切枪"
+      },
+      "duration": {
+        "kind": "COMMIT",
+        "note": {
+          "zh_cn": "drawTime"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).draw()",
+      "existingImpl": "TLM 已实现（切槽/开关背包/副手交换/重生时）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/entity/IGunOperator#draw()"
+        }
+      ],
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:fire_select",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "切换射击模式",
+        "en_us": "Fire Select"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "在 GunData.getFireModeSet() 内回绕；会重算配件缓存"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ IGunOperator.fromLivingEntity(maid).fireSelect()（实体无关，见 LivingEntityFireSelect）；或直接写物品 NBT 键 GunFireMode（IGun#setFireMode）",
+      "existingImpl": "❌ **零调用**（TLM 从未调用）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧 key.tacz.fire_select（G=71）点击 → PlayerFireSelect"
+        },
+        {
+          "level": "verified",
+          "cite": "player 侧 LivingEntityFireSelect#fireSelect() 实体无关 + IGun#setFireMode 是接口方法"
+        },
+        {
+          "level": "verified",
+          "cite": "GunItemDataAccessor（NBT 键 GunFireMode）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 唯一「完全没实现 + 一行 API 到位」的缺口，P0 第一批首选。"
+      },
+      "role": "stance"
+    },
+    {
+      "id": "tacz:melee",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "枪托近战",
+        "en_us": "Gun Melee"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★ 20 tick = 整动作/冷却。证据：**prep 2 tick** 后结算伤害（`GunDefaultMeleeData.prep` 默认 0.1s ⇒ `LivingEntityMelee.java:79-97` 的 `(int)(prepTime*20)`），整动作冷却默认 **20 tick**（`GunMeleeData.cooldown` 默认 1.0f ⇒ `:151-157` 的 `totalCooldownTime*1000ms`）。⚠️ 真值随枪/配件不同（MUZZLE/STOCK 附件会覆盖），但 TaCZ 自己按 tick 驱动结算 ⇒ 我们只给兜底。★★ 2026-10-01：本条原来只有 `kind` 没有 `ticks` ⇒ 承诺=0 ⇒ **有执行器却收不了尾**（`audit_durations.py` 抓到的正是这个）。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE",
+          "note": {
+            "zh_cn": "附带击退"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).melee() → LivingEntityMelee.melee() → ModernKineticGunItem.melee()",
+      "existingImpl": "❌ **零调用** —— ★ 这修的是一个**真实战力空档**",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧 key.tacz.melee（V=86），仅 !isAim() 时",
+          "note": "★ 与 zoom 共用 V 键、由 isAim() 互斥分流"
+        },
+        {
+          "level": "verified",
+          "cite": "AbstractGunItem#onEntitySwing 返回 true",
+          "note": "★★ 持枪时原版挥击被取消 ⇒ 女仆贴身时**完全没有任何输出**（连普通 mobAttack 都没有）"
+        },
+        {
+          "level": "verified",
+          "cite": "ModernKineticGunItem#melee()（MUZZLE→STOCK→默认 GunMeleeData）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 2026-10-01（委托方拍板「优先选稳定、无风险」）：**本条的执行器已撤掉** —— 它曾是本项目唯一需要新增编译依赖的执行器（TaCZ 的 compileOnly，只为直调 `IGunOperator#melee()`），而实测 TaCZ 的 `mods.toml` 许可是 `GPL3 / CC BY-NC-ND 4.0`（GPL3 具传染性）。⇒ 为 1/77 条动作背这笔许可账不划算。★ 影响面：**只有「持枪贴身」这一种情形少了输出**；持枪的**远程开火完全不受影响**（走 TLM 的公开 `GunCommonUtil`，零新依赖）。★ `duration` 与证据保留 —— 若将来重新引入，数据已经就绪（但要先把许可账记进 THIRD_PARTY_NOTICES）。　★★ 这是本报告最重要的实战发现：不是「少了一个动作」，而是「持枪的女仆近身即失去攻击能力」。"
+      }
+    },
+    {
+      "id": "tacz:zoom",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "倍镜缩放"
+      },
+      "preconditions": [
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "★ 必须 isAim() == true"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "服务端只 +1 scope 的 zoomNumber NBT，无可视效果（表现层在客户端）"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachNote": {
+        "zh_cn": "API 可达（R-A），但**对 mob 无意义**：无可视效果 ⇒ 建议不做"
+      },
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).zoom()",
+      "existingImpl": "❌ 零调用（且不值得补）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧 key.tacz.zoom（V=86），仅 isAim() 时"
+        }
+      ],
+      "role": "stance"
+    },
+    {
+      "id": "tacz:attachment",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "装 / 卸配件"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "改的是 GunData / AttachmentCacheProperty 数值表"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IGun#installAttachment(String) / unloadAttachment(String) + AttachmentPropertyManager.postChangeEvent(LivingEntity, ItemStack)（都是 LivingEntity 级）",
+      "existingImpl": "❌ 零调用；⚠️ dropAllAmmo(Player, …) 对女仆不可用",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧 Z(90) 开 GunRefitScreen GUI 拖拽 → RefitGun / UnloadAttachment（GUI 是 R-C）"
+        },
+        {
+          "level": "verified",
+          "cite": "IGun#installAttachment / unloadAttachment / AttachmentPropertyManager.postChangeEvent(LivingEntity, ItemStack)"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 重要判断：**mob 不需要「装」这个动作**。配件只是数值表的输入 ⇒ 预装（服务端直接写）即可生效，不需要模拟 GUI 拖拽。只有「女仆自己从背包挑配件」才需要 install/unload，那属中成本。"
+      },
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:crawl",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "匍匐"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachRisk": "★ 有风险：LivingEntityCrawl.setCrawlPose 的非玩家分支走 setPose(SWIMMING)，且 else 分支**不复位** ⇒ 可能留下卡住的姿态",
+      "reachEntry": "IGunOperator.fromLivingEntity(maid).crawl()",
+      "existingImpl": "❌ 零调用（建议不补，见 reachRisk）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "player 侧 key.tacz.crawl（C=67），ENABLE_CRAWL 默认 true"
+        }
+      ],
+      "role": "stance"
+    },
+    {
+      "id": "tacz:inspect",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "检视武器"
+      },
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★ 20 tick = 整动作/冷却。证据（TaCZ 1.1.7-hotfix2 反编译）：伤害在 **prep 2 tick** 后结算（LivingEntityMelee.java:79-108：prepTime 默认 0.1s × 20 = 2），而封锁下一次的冷却默认 **20 tick**（GunMeleeData.java:17-18 cooldown = 1.0f ⇒ :151-157 totalCooldownTime × 1000ms）。⚠️ 若枪包既无 MUZZLE/STOCK 近战数据、default_melee_data 也为 null，则 meleePrepTickCount 恒为 -1（ShooterDataHolder.java:25）⇒ scheduleTickMelee 永不结算 ⇒ **枪托近战静默无效**。这也是 README 里「持枪贴身完全没有输出」的成因之一。"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "player 侧 H(72)，**无对应网络包 ⇒ 纯客户端**。且纯表现层，不需要补"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "key.tacz.inspect（H=72），无 Player* 包"
+        }
+      ],
+      "role": "maintenance"
+    },
+    {
+      "id": "tacz:use_item_interact",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "持械互动"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "player 侧 O(79)，**无网络包** ⇒ 客户端 startUseItem 路径"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "key.tacz.interact（O=79），无 Player* 包"
+        }
+      ],
+      "role": "maintenance"
+    },
+    {
+      "id": "pillagersgun:charge_and_fire",
+      "kind": "atomic",
+      "carrier": "pillagersgun:gun",
+      "sourceMod": "pillagers_gun",
+      "displayName": {
+        "zh_cn": "蓄力弩式开枪（Pillager's Gun）"
+      },
+      "summary": {
+        "zh_cn": "★ Pillager's Gun 是**完全独立的枪械体系**（GunItem extends ProjectileWeaponItem，弩式蓄力 + 真 AbstractArrow 弹体），TLM 完全不识别它。但它的 mob 侧已有现成的 GunAttackGoal 状态机，且全程只用 public static ⇒ 可以在**本模组**里支持，无需改 TLM。"
+      },
+      "params": {
+        "stage": {
+          "values": [
+            "CHARGE",
+            "FIRE"
+          ],
+          "note": {
+            "zh_cn": "玩家侧只有 2 个动作：右键蓄力 → 再次右键开火"
+          }
+        }
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "主手是 pillagers_gun 的 GunItem"
+          }
+        },
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "NBT：Charged / ChargedProjectiles / ammo"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "reachEntry": "★ 复刻它自己的 GunAttackGoal（R-B，成本中）：maid.startUsingItem(MAIN_HAND) → 等 getTicksUsingItem() >= GunItem.getChargeDuration(stack) → maid.stopUsingItem()（触发 PG 自己的装填逻辑）→ 延迟 → GunItem.performShooting(level, maid, hand, stack, power)。★ PG 自己就是用这套给卫兵/新兵挂枪的。⛔ **绝不要尝试让 GunItem 实现 TaCZ 的 IGun**（IGun 有约 45 个抽象方法，且 TaCZ 全流程依赖 TimelessAPI.getCommonGunIndex() 的枪包注册表，PG 枪没有索引 ⇒ 等于重写 TaCZ 数据层；且 PG 的 loadProjectile / tryLoadProjectiles 是 private）",
+      "existingImpl": "❌ TLM 完全不识别（全 src 搜 pillager 只命中原版前哨站内容，无 scarasol / pillagers_gun 引用）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "compat/gun/**（TLM 只认 TaCZ 的 IGun 与卓越前线的标签）"
+        },
+        {
+          "level": "verified",
+          "cite": "PG 反编译 34 个 .java，GunItem extends ProjectileWeaponItem implements Vanishable + GunAttackGoal 四态状态机"
+        }
+      ]
+    },
+    {
+      "id": "tacz:grenade",
+      "kind": "atomic",
+      "carrier": "tacz:gun",
+      "sourceMod": "tacz",
+      "displayName": {
+        "zh_cn": "手雷 / 榴弹"
+      },
+      "summary": {
+        "zh_cn": "★ **TaCZ 侧根本不存在手雷** —— 不是 TLM 的遗漏。`TacCompat.isGrenade` 硬编码 false 是**正确实现**。"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "不存在于模组中 ⇒ 不可达。证据：816 个 class 搜 Grenade|grenade|Throw **零实体命中**；三个 addon（taczaddon 73 / taczlabs 22 / FCE 8 class）也零命中；仅剩 ModSyncedEntityData.THROWABLE_USE_TICK（无读写方）与 ThrowableAnimationStateContext（空类）—— **废弃脚手架**。且 TacCompat.isGrenade 在全仓**无任何调用点**（孤立 TODO）。"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "TaCZ 1.1.7-hotfix2 全 jar class 扫描（Grenade|grenade|Throw 零实体命中）"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/tacz/TacCompat.isGrenade = iconst_0; ireturn（javap 确认）+ 无调用点"
+        },
+        {
+          "level": "inferred",
+          "cite": "RPG 类「榴弹」= 普通枪 + 爆炸弹药，走 shoot() ⇒ 女仆已能打"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 这条纠正了一个流传的说法。**不要再把手雷列为「TLM 未实现的缺口」**。"
+      }
+    }
+  ]
+}

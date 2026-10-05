@@ -1,0 +1,1027 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "★ 本表是\"动作值多少\"的权威。本轮由子代理按 docs/09 §3.1 的 8 轴语义**逐条重打**（provenance=agent），并附 reason / confidence 供人工复核。",
+  "notes": {
+    "zh_cn": "★ 权威来源=本文件。provenance：authored=人工 / agent=子代理打分（**待人工复核**）/ heuristic=规则推导（已知有错）/ measured=实测反推。★ confidence：high/medium/low —— 复核时**先看 low 的**。★ `previousHeuristic` 保留上一版的值，便于对比\"这轮改了什么\"。★ 轴语义见 docs/09 §3.1；MOBILITY 是唯一有向轴（正=靠近，负=远离）。★★ 2026-09-30：走位已从动作层移出（改为并发槽位「步法」，role=stance）⇒ `fight_like_player:charge` / `retreat` 两条向量随之删除 —— **步法不参与评分、也不发布扣减**，它的方向由 MOBILITY 的符号驱动。详见 docs/04 Q18 与 catalog/data/fight_like_player.json。"
+  },
+  "vectors": {
+    "fight_like_player:disengage": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.8,
+        "AREA_DAMAGE": -0.3,
+        "MITIGATION_SURVIVAL": 0.8,
+        "MOBILITY": -0.9
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "持续跑离仇恨源并脱战：生存拉满，但完全放弃输出，代价显式写负。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.8,
+          "AREA_DAMAGE": -0.3,
+          "MITIGATION_SURVIVAL": 0.8,
+          "MOBILITY": -0.9
+        },
+        "provenance": "authored"
+      }
+    },
+    "goety:cast_focus": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "authored",
+      "confidence": "low",
+      "reason": "★★ 2026-09-30（D4 决议）：**临时族兜底**。原本 vector=null + 只有 8 类 overrides，而运行期拿不到 focusCategory（W23 未做）⇒ ActionSpec.pickVector 回落到 defaultVector=null ⇒ 被 DropReason.NO_VECTOR 丢弃 ⇒ **即使用执行器已实现，Goety 施法在游戏里也是 0 可用**。⇒ 按「最常见的聚晶是单体攻击」取 ATTACK_SINGLE 的向量作兜底。⚠️ 它**不是**对具体法术的打分，只是让这个族能进候选集；一旦 W23 落地（读得到 focusCategory），overrides 会立刻接管。",
+      "overrides": {
+        "ATTACK_SINGLE": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "ATTACK_AREA": {
+          "SINGLE_DAMAGE": 0.3,
+          "AREA_DAMAGE": 0.9,
+          "MITIGATION_SURVIVAL": -0.3
+        },
+        "SUMMON": {
+          "SINGLE_DAMAGE": -0.2,
+          "REINFORCE": 0.8
+        },
+        "UTILITY": {
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 0.3
+        },
+        "PROTECTION": {
+          "MITIGATION_SURVIVAL": 0.8,
+          "ALLY_CARE": 0.2
+        },
+        "HEALING": {
+          "HEAL_SURVIVAL": 0.8,
+          "ALLY_CARE": 0.5
+        },
+        "CONTROL": {
+          "SINGLE_DAMAGE": 0.2,
+          "CONTROL": 0.7,
+          "MITIGATION_SURVIVAL": 0.2
+        },
+        "SERVANT_MGMT": {
+          "SINGLE_DAMAGE": -0.1,
+          "REINFORCE": 0.3
+        }
+      },
+      "previousHeuristic": {
+        "vector": null,
+        "provenance": "authored"
+      }
+    },
+    "goety:execute_servant": {
+      "vector": {},
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "管理动作（点名处死自己的一个仆从），既不产生战力也不利敌 ⇒ 全 0。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.1,
+          "CONTROL": 0.2,
+          "REINFORCE": 0.1
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "goety:recall_servants": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.1,
+        "REINFORCE": 0.3
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "把仆从集结到身边＝集中已有战力（强化），但自己不动、不造成伤害。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.1,
+          "CONTROL": 0.2,
+          "MOBILITY": 0.6,
+          "REINFORCE": 0.4
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "goety:recall_to_saved_coords": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.2,
+        "REINFORCE": -0.2
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "把仆从送回据点是把自己的战力撤出战场 ⇒ 两项都记代价而非收益。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.1,
+          "CONTROL": 0.2,
+          "MOBILITY": 0.6,
+          "REINFORCE": 0.4
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "goety:set_servant_stance": {
+      "vector": {},
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "仆从姿态管理（闲逛/待命/跟随/警戒），战斗中不产生即时战力 ⇒ 全 0。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.1,
+          "REINFORCE": 0.9
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "goety:transfer_servant_ownership": {
+      "vector": {},
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "转移仆从归属是管理/社交动作，战斗中无收益 ⇒ 全 0。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": -0.1,
+          "REINFORCE": 0.9
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "irons:cast_scroll": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "卷轴里装的法术类别在清单期未知 ⇒ 只能给中庸值；能读到 spellId 时应按其打分。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "ALLY_CARE": 0.6
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "irons:cast_spell": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.7,
+        "AREA_DAMAGE": 0.3,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "按战术意图而非学派过写：ATTACK 含大量 AoE 故补范围；SUPPORT 兼顾回血/护盾/增益。",
+      "overrides": {
+        "ATTACK": {
+          "SINGLE_DAMAGE": 0.7,
+          "AREA_DAMAGE": 0.3,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "SUPPORT": {
+          "HEAL_SURVIVAL": 0.5,
+          "MITIGATION_SURVIVAL": 0.2,
+          "REINFORCE": 0.3,
+          "ALLY_CARE": 0.7
+        },
+        "SUMMON": {
+          "SINGLE_DAMAGE": -0.2,
+          "REINFORCE": 0.8
+        }
+      },
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "irons:recast": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.8,
+        "AREA_DAMAGE": 0.4,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "多段续放（窗口最长 80t）⇒ 持续压制更强，但锁定窗口的暴露代价也更大。",
+      "overrides": {
+        "ATTACK": {
+          "SINGLE_DAMAGE": 0.8,
+          "AREA_DAMAGE": 0.4,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "SUPPORT": {
+          "HEAL_SURVIVAL": 0.5,
+          "MITIGATION_SURVIVAL": 0.2,
+          "REINFORCE": 0.3,
+          "ALLY_CARE": 0.7
+        },
+        "SUMMON": {
+          "SINGLE_DAMAGE": -0.2,
+          "REINFORCE": 0.8
+        }
+      },
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:bow_shot": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "远程单体输出，可在安全距离射击 ⇒ 少量免伤正向。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "MITIGATION_SURVIVAL": 0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:crossbow_shot": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "弩单发伤害高于弓且可预装填，远程单体；同理给少量免伤。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": 0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:danmaku": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.4,
+        "CONTROL": 0.2
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "弹幕散布可压制小群并附带减速（限制敌方位移），单体伤害一般。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "AREA_DAMAGE": 0.4,
+          "CONTROL": 0.2
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:gun_shot": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.2
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "基线里整个枪械载体只有「射击」一条 ⇒ 按步枪类均值给分。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.2
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:melee_swing": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.7,
+        "AREA_DAMAGE": 0.25,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "通用近战，横扫的群伤期望已并入 AREA；贴身挥击有一点暴露代价。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7,
+          "AREA_DAMAGE": 0.25,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:slashblade_generic_slash": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "TLM 对拔刀剑的全部支持＝一次随机角度斩击，纯单体近战。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:throw_any_item": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.4
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "投掷任意物品：伤害低且不稳定，只算弱单体输出。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.4
+        },
+        "provenance": "authored"
+      }
+    },
+    "maid_native:trident": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.55,
+        "MITIGATION_SURVIVAL": 0.0
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "投掷/近战两用，投掷为远程单体。★ 原 MOBILITY 0.2 无依据，已去掉。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.7,
+          "MOBILITY": 0.2
+        },
+        "provenance": "authored"
+      }
+    },
+    "pillagersgun:charge_and_fire": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "弩式蓄力后射出真实弹体的单体远程攻击；蓄力段占用身位，轻微暴露。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:aerial_cleave": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.7,
+        "AREA_DAMAGE": 0.2,
+        "MOBILITY": 0.4,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "空坠斩＝从空中向下砸向目标的俯冲重击，属靠近方向的交战位移。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.9
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:aerial_rave_a": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "滞空三连斩，空中的单体输出；滞空期间无法格挡与灵活走位。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.3
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:aerial_rave_b": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.65,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "滞空 2+2 连段，段数更多 ⇒ 略高于御空刀舞 A。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.3
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:air_trick": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.2,
+        "MOBILITY": 1.0,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "先射幻影剑再瞬移到目标头顶 ⇒ 强追踪（靠近），但把自己送进敌群。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:blistering_swords": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.7,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "急袭幻剑阵＝向前急袭的剑群，比环形/怒风更集中，单体占比略高。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.8
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:combo_a": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "四段基础连击，单体输出主力；斩击弧可擦到邻近敌人，贴身有暴露。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:combo_a_ex": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.75,
+        "AREA_DAMAGE": 0.25,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "五段终结版，需「力量」或「饥饿」效果 ⇒ 有 buff 时的高额单体爆发。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:combo_b": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.55,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "三段＋停顿后收招，需时间窗口；价值与连击 A 近似而略低。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:combo_b_finish": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.65,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "连击 B 的终结段（「撕碎！」），单段伤害明显高于普通连击。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:combo_c": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "两段＋延时收招，段数最少 ⇒ 地面连击三者中单体输出最低。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:enemy_step": {
+      "vector": {
+        "MOBILITY": 0.3,
+        "MITIGATION_SURVIVAL": 0.4
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "踩敌二段跳并获 10 tick 无敌，是滞空续命手段，本身无伤害。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:guard": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.3,
+        "MITIGATION_SURVIVAL": 0.6
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "举刀防御令远程攻击无效（需荆棘附魔），但按住期间完全放弃输出。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.4,
+          "MITIGATION_SURVIVAL": 0.3
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:guard_just": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.1,
+        "MITIGATION_SURVIVAL": 0.85
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "完美格挡使任何攻击无效、给 10 tick 无敌并接反击，几乎不牺牲输出。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.4,
+          "MITIGATION_SURVIVAL": 0.6,
+          "CONTROL": 0.4
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:heavy_rain_swords": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.4,
+        "AREA_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "暴雨幻剑阵覆盖面最大（后退→前进蓄势），是纯范围压制手段。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.8
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:judgement_cut": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.9,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "蓄力 9 tick 后在目标处生成斩击球，范围压制为主；蓄力期间无格挡。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.4,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:judgement_cut_just": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.9,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "完美时机松手的次元斩·绝，范围同前而单点更高；仍需承担蓄力暴露。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.4,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:kick_jump": {
+      "vector": {
+        "MOBILITY": 0.3,
+        "MITIGATION_SURVIVAL": 0.3
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "蹬墙再跳：滞空机动兼 10 tick 无敌；无伤害，且必须贴墙。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:quick_charge": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.3,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "纳刀瞬间接招可把释放升格为「绝」，省掉长蓄力 ⇒ 暴露小于普通 SA。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:rapid_slash": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.15,
+        "MOBILITY": 0.6,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "迅冲斩＝向前突进的斩击，位移＋伤害兼备；冲进敌阵换来回合暴露。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.6
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:rising_star": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MOBILITY": 0.7,
+        "MITIGATION_SURVIVAL": -0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "迅冲斩后的追击升空，主动贴向目标（靠近方向为正）；滞空有代价。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.9
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:slash_art": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.3,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "9 种 SA 逐个过写：9 tick 蓄力统一计入免伤代价，输出形态按斩击范围分档。",
+      "overrides": {
+        "none": {},
+        "judgement_cut": {
+          "SINGLE_DAMAGE": 0.5,
+          "AREA_DAMAGE": 0.9,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "sakura_end": {
+          "SINGLE_DAMAGE": 0.9,
+          "AREA_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": -0.3
+        },
+        "void_slash": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "circle_slash": {
+          "SINGLE_DAMAGE": 0.4,
+          "AREA_DAMAGE": 0.8,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "drive_vertical": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": 0.1
+        },
+        "drive_horizontal": {
+          "SINGLE_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": 0.1
+        },
+        "wave_edge": {
+          "SINGLE_DAMAGE": 0.5,
+          "AREA_DAMAGE": 0.7,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "piercing": {
+          "SINGLE_DAMAGE": 0.8,
+          "CONTROL": 0.2,
+          "MITIGATION_SURVIVAL": -0.1
+        }
+      },
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.3,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "slashblade:spiral_swords": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.4,
+        "AREA_DAMAGE": 0.8,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "20 耀魂张开环形剑阵，对成圈目标持续切割 ⇒ 范围压制为主。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.8
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:storm_swords": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.4,
+        "AREA_DAMAGE": 0.8,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "怒风幻剑阵需锁定目标，剑群围绕目标肆虐；与环形阵同档。★ 原 MOBILITY 0.6 无依据。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "AREA_DAMAGE": 0.8,
+          "MOBILITY": 0.6
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:summoned_sword": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MITIGATION_SURVIVAL": 0.1
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "2 点耀魂射出一发远程幻影剑，单体点名；可在安全距离补刀。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "REINFORCE": 0.7
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:super_slash_art": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.7,
+        "AREA_DAMAGE": 0.9,
+        "MITIGATION_SURVIVAL": -0.2
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "妖刀 SSA：按住 20 tick 的大范围终结技，暴露最重且消耗半耐久。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:trick_dodge": {
+      "vector": {
+        "SINGLE_DAMAGE": -0.3,
+        "MITIGATION_SURVIVAL": 0.7,
+        "MOBILITY": -1.0
+      },
+      "provenance": "agent",
+      "confidence": "high",
+      "reason": "瞬步回避给 10 tick 无敌并向任意方向脱离 ⇒ 强生存，代价是放弃输出。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": -1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:trick_down": {
+      "vector": {
+        "MITIGATION_SURVIVAL": 0.3
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "瞬步退行是快速落地脱离滞空挨打；不造成伤害，水平距离基本不变。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:trick_up": {
+      "vector": {
+        "MOBILITY": 0.4,
+        "MITIGATION_SURVIVAL": 0.2
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "向上瞬移脱离地面近战范围；垂直位移按现行约定取正。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:upperslash": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "CONTROL": 0.3,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "上斩把敌人挑空（限制其行动、便于追击）；自身不产生位移。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MOBILITY": 0.9
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "slashblade:upperslash_jump": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.85,
+        "MOBILITY": 0.8,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "上斩后按住升空连斩；垂直位移按现行约定取正，滞空期间难以格挡。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 1.0,
+          "MITIGATION_SURVIVAL": 0.3,
+          "MOBILITY": 1.0
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "tacz:grenade": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.5,
+        "AREA_DAMAGE": 0.8,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "low",
+      "reason": "★ TaCZ 内并无手雷实体（reach=RC 不注册），此向量只是「若有手雷」的语义值。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.5,
+          "AREA_DAMAGE": 0.8,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    },
+    "tacz:melee": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.4,
+        "AREA_DAMAGE": 0.2,
+        "CONTROL": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "枪托近战＝锥形范围小伤害＋击退，修贴身空档；有前摇且必须贴脸。",
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "MOBILITY": 0.6
+        },
+        "provenance": "heuristic"
+      }
+    },
+    "tacz:shoot": {
+      "vector": {
+        "SINGLE_DAMAGE": 0.6,
+        "AREA_DAMAGE": 0.2,
+        "MITIGATION_SURVIVAL": -0.05
+      },
+      "provenance": "agent",
+      "confidence": "medium",
+      "reason": "枪型决定射程/射速/散布/单发伤害：族默认≈步枪，7 型逐一过写（单位＝打空一梭）。",
+      "overrides": {
+        "pistol": {
+          "SINGLE_DAMAGE": 0.4,
+          "MOBILITY": 0.1
+        },
+        "rifle": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.2,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "smg": {
+          "SINGLE_DAMAGE": 0.5,
+          "AREA_DAMAGE": 0.2,
+          "MITIGATION_SURVIVAL": -0.1,
+          "MOBILITY": 0.1
+        },
+        "shotgun": {
+          "SINGLE_DAMAGE": 0.7,
+          "AREA_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": -0.2
+        },
+        "sniper": {
+          "SINGLE_DAMAGE": 0.9,
+          "MITIGATION_SURVIVAL": 0.1
+        },
+        "mg": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.5,
+          "MITIGATION_SURVIVAL": -0.3
+        },
+        "rpg": {
+          "SINGLE_DAMAGE": 0.3,
+          "AREA_DAMAGE": 0.9,
+          "MITIGATION_SURVIVAL": -0.2
+        }
+      },
+      "previousHeuristic": {
+        "vector": {
+          "SINGLE_DAMAGE": 0.6,
+          "AREA_DAMAGE": 0.2,
+          "MITIGATION_SURVIVAL": -0.1
+        },
+        "provenance": "authored"
+      }
+    }
+  },
+  "removedBecausePassive": {
+    "maid_native:sweep": "role=passive：由 EntityMaid#doHurtTarget 自动附带，不是可选动作 ⇒ 不需要评分。其价值已并入 maid_native:melee_swing。",
+    "maid_native:extinguisher_extra": "role=passive：由 EntityMaid#doHurtTarget 自动附带，不是可选动作 ⇒ 不需要评分。其价值已并入 maid_native:melee_swing。",
+    "maid_native:shield_block": "role=stance（第十一轮）：举盾改为【副手姿态伺服】维持（compat/behavior/OffhandStance）—— 不是一次选择而是一种状态：副手不是盾就从背包换上来，8 格内举着、12 格外才放（带迟滞）。原评分 SINGLE_DAMAGE -0.3 / MITIGATION_SURVIVAL +0.6 随之移除：stance 不进候选集，评分无处可用。★ 说明必须放在 vectors【之外】（这里），塞进 vectors 会让 6 个工具同时崩 —— 见 docs/13 第 45 条。"
+  }
+}

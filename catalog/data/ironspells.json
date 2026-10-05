@@ -1,0 +1,661 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "_research/ironspells-gap-analysis.md（证据：Iron's Spellbooks 3.4.0.9 反编译 + 万法皆通 1.7.3.8/1.8.2 字节码 + 与 ISS 自身 mob 路径对照）",
+  "operations": [
+    {
+      "id": "irons:cast_spell",
+      "kind": "family",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "施放法术",
+        "en_us": "Cast Spell"
+      },
+      "summary": {
+        "zh_cn": "★ 94 个法术只有 3 个真实施法形态（CastType 只有 4 个常量，没有 CHARGE）。女仆路径与 ISS 自己的 mob 路径一致：只走 checkPreCastConditions + onCast，不扣蓝、不进 CD、不 post 事件。"
+      },
+      "params": {
+        "spell": {
+          "ref": "SpellRegistry 注册的全部法术",
+          "count": 94,
+          "note": {
+            "zh_cn": "★ 3.4.0.9 的 94 个按 CastType 分布：INSTANT 41 / LONG 43 / CONTINUOUS 10。⚠️ 3.16.3 的法术数与 recast 数都更多（见 recast 条目）。"
+          }
+        },
+        "castType": {
+          "values": [
+            "NONE",
+            "INSTANT",
+            "LONG",
+            "CONTINUOUS"
+          ],
+          "count": 4,
+          "note": {
+            "zh_cn": "★ CastType.java:6-10 只有这 4 个常量 —— **没有 CHARGE**（lang 里的 cast_charge 是 ChargeSpell 的 tooltip，不是 CastType）。immediatelySuppressRightClicks() = LONG || CONTINUOUS。LONG = 按住蓄力、松手结算；CONTINUOUS = 按住、每 10 tick 一次 onCast。"
+          }
+        },
+        "castSource": {
+          "values": [
+            "SPELLBOOK",
+            "SWORD",
+            "MOB",
+            "COMMAND"
+          ],
+          "note": {
+            "zh_cn": "★ 只有 SPELLBOOK / SWORD 扣蓝。ISS 自己的 mob 路径用 MOB / COMMAND，**同样不扣蓝不进 CD** ⇒ 女仆的行为与 ISS 的设计意图一致，不是我们的偏差。"
+          }
+        },
+        "spellIntent": {
+          "ref": "① spell.getRecastCount(level, entity) > 0 ⇒ SUMMON（闭包，自动覆盖新增 recast 法术）；② 属于 Utils.preCastTargetHelper 的 22 个法术 ⇒ SUPPORT（名单见 _research §4.4 附近）；③ 其余 ⇒ ATTACK",
+          "values": [
+            "ATTACK",
+            "SUPPORT",
+            "SUMMON"
+          ],
+          "count": 3,
+          "note": {
+            "zh_cn": "★★ 按【战术意图】而不是【学派】分类。理由（已查证）：铁魔法学派只影响属性/施法音/指示圈颜色/卷轴台材料（_research §1.9）—— 即 fireball(火) 与 frost_bolt(冰) 战术上同类，而 heal(神圣) 与 fireball(火) 才是真正不同的两件事。★ 用学派打分是错的。"
+          }
+        }
+      },
+      "preconditions": [
+        {
+          "type": "spellConditionsMet",
+          "fact": "irons:can_cast",
+          "note": {
+            "zh_cn": "checkPreCastConditions。⚠️ 女仆路径**只走这一道**；ISS 的 canBeCastedBy（蓝/CD/冒险模式/已学）形参是 Player ⇒ R-C，mob 传不进去。★★ 2026-09-30：必须显式声明事实键 —— 游戏侧此前什么都没喂 ⇒ 施法在游戏里永远拿不到。现在由 PlayerLikeCombat 喂 irons:can_cast = IronsExecutors.hasAnySpell(女仆)（= 持有任一带法术的书/卷轴）。"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "NONE",
+          "note": {
+            "zh_cn": "★ 已确认女仆不消耗法力（new MagicData(true)，mana 恒 0 且从不写）。ISS 自己的 mob 路径也如此。"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "INSTANT",
+        "note": {
+          "zh_cn": "族默认；实际按 castType 覆写，见 durationOverrides。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "HEAL"
+        },
+        {
+          "type": "SUMMON"
+        },
+        {
+          "type": "APPLY_EFFECT"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "直接调 spell.onCast(ServerLevel, LivingEntity, ItemStack, CastSource, CastData)（女仆路径）。★ 注意与 Goety 的差异：这里**不应**追求走 canBeCastedBy（那是 Player 签名）。",
+      "existingImpl": "万法皆通 IronsSpellbooksProvider#actualCasting（已实现，但**跳过了 castSpell / canBeCastedBy / onRecastFinished / 两个法术事件**）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/spells/CastType.java:6-10",
+          "note": "只有 NONE/INSTANT/LONG/CONTINUOUS 四个常量"
+        },
+        {
+          "level": "verified",
+          "cite": "spell/data/MaidIronsSpellData.java:28",
+          "note": "new MagicData(true) ⇒ mana 恒 0"
+        },
+        {
+          "level": "verified",
+          "cite": "IronsSpellbooksProvider#actualCasting:175-198",
+          "note": "只走 checkPreCastConditions + onCast"
+        },
+        {
+          "level": "verified",
+          "cite": "AbstractSpellCastingMob#initiateCastSpell（CastSource.MOB）+ CastCommand.java:85-92（CastSource.COMMAND）",
+          "note": "★ ISS 自己的 mob 路径同样只走 checkPreCastConditions + onCast + onServerCastComplete，不扣蓝不进 CD 不 post 事件 ⇒ 我们的行为与上游设计一致"
+        }
+      ],
+      "note": {
+        "zh_cn": " ★★ W20 已补：本族按【spellIntent】参数化（ATTACK/SUPPORT/SUMMON），因此 heal 与 fireball 不再同分。★ 刻意【不用学派】（学派只影响属性/音效/颜色）。"
+      },
+      "durationOverrides": {
+        "INSTANT": {
+          "kind": "INSTANT",
+          "note": {
+            "zh_cn": "瞬发：一次 onCast 结算。"
+          }
+        },
+        "LONG": {
+          "kind": "COMMIT",
+          "ticks": 20,
+          "note": {
+            "zh_cn": "★ 按住蓄力、松手结算（immediatelySuppressRightClicks() 为真 ⇒ 客户端立刻拦截右键）。⇒ 蓄力段必须视为【承诺】，否则决策层会在蓄力途中重选，法术永远放不出来。ticks 为名义值（真实蓄力时长由 spell 决定）。"
+          }
+        },
+        "CONTINUOUS": {
+          "kind": "CHANNEL",
+          "sustainTicks": 100,
+          "note": {
+            "zh_cn": "★★ 持续引导：每 10 tick 一次 onCast，松手即取消（AbstractSpell.java:353-358）。⇒ 建模为 CHANNEL：决策层每个周期可决定是否继续 —— 这正是「按住不放」的语义。"
+          }
+        },
+        "NONE": {
+          "kind": "INSTANT",
+          "note": {
+            "zh_cn": "占位（NoneSpell），实际不可施放。"
+          }
+        }
+      }
+    },
+    {
+      "id": "irons:recast",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "recast 二段/多段施法",
+        "en_us": "Recast"
+      },
+      "summary": {
+        "zh_cn": "★★ 玩家与女仆之间**最大的行为差异**。玩家在窗口内连续右键可续放，且窗口内免蓝免 CD。"
+      },
+      "params": {
+        "spell": {
+          "ref": "spell.getRecastCount(level, maid) > 0 的全部法术",
+          "count": 4,
+          "note": {
+            "zh_cn": "★ 3.4.0.9 下只有 4 个：wall_of_fire(3段/40t) / flaming_barrage(5段/80t) / eldritch_blast(2+level/80t) / portal(2段/2400t)。⚡ **3.16.3 已扩到 11 个**：再加 raise_dead / summon_swords / summon_horse / summon_vex / summon_polar_bear / thunder_step / raise_hell。⇒ **Iron's 版本选择直接决定这一条的成本。**"
+          }
+        },
+        "spellIntent": {
+          "ref": "① spell.getRecastCount(level, entity) > 0 ⇒ SUMMON（闭包，自动覆盖新增 recast 法术）；② 属于 Utils.preCastTargetHelper 的 22 个法术 ⇒ SUPPORT（名单见 _research §4.4 附近）；③ 其余 ⇒ ATTACK",
+          "values": [
+            "ATTACK",
+            "SUPPORT",
+            "SUMMON"
+          ],
+          "count": 3,
+          "note": {
+            "zh_cn": "★★ 按【战术意图】而不是【学派】分类。理由（已查证）：铁魔法学派只影响属性/施法音/指示圈颜色/卷轴台材料（_research §1.9）—— 即 fireball(火) 与 frost_bolt(冰) 战术上同类，而 heal(神圣) 与 fireball(火) 才是真正不同的两件事。★ 用学派打分是错的。"
+          }
+        }
+      },
+      "stateReq": [
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "窗口内连续施法；过期或段数用尽 ⇒ PlayerRecasts.removeRecast ⇒ onRecastFinished"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "NONE",
+          "note": {
+            "zh_cn": "★ 窗口内**免蓝免 CD**（canBeCastedBy:319-329 + castSpell:283）；首段施法还会 removeCooldown"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 80,
+        "note": {
+          "zh_cn": "★ 80 = **最常见的窗口**（flaming_barrage / eldritch_blast 的 `ticksToLive`）；真值按法术不同：wall_of_fire **40** / flaming_barrage **80** / eldritch_blast **80** / portal **2400**。证据：RecastInstance.java:36-45（`ticksToLive = remainingTicks`）+ 各法术的 `new RecastInstance(..., <窗口>, ...)`；窗口以 **2 tick** 为步长递减（PlayerRecasts.java:205-210，由 MagicManager.java:62 `tick(2)` 驱动）。⚠️ 执行器**未实现**（W36）⇒ 该动作目前拿不到；这里填的是「承诺形状」，不是「已可用」。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "SUMMON"
+        },
+        {
+          "type": "TELEPORT"
+        }
+      ],
+      "reach": "RB",
+      "reachEntry": "★ 推荐做法（**不要按 spellId 硬编码**）：① 用 `spell.getRecastCount(level, maid) > 0` 判「是不是 recast 法术」（public 且吃 LivingEntity ⇒ R-A）；② 用 `spell.getEmptyCastData()` 的**类型**做收尾分发（对齐 ISS 自己的多态做法）⇒ **3.16.x 新增的 recast 法术自动覆盖**。⚠️ 不要用反射删 `recastLookup`（1.8.2 的做法），改用 Mixin `@Accessor`（字段改名时编译期失败，而不是静默卡死）。",
+      "existingImpl": "★★ **万法皆通 1.8.2 已经自己实现了 recast**（`MaidIronsSpellData$MaidRecastSession`：spell/castSource/recastInstance/intervalTicks=10/ticksUntilNextRecast/remainingRecasts/finished + tickReady/consumeRecast/markFinished）。它用 `MAID_RECAST_FIRST_CAST_ONLY={raise_dead, summon_swords, summon_horse, summon_vex, summon_polar_bear, portal}` 走「只放第一段」，用**反射 getDeclaredField(\"recastLookup\")** 绕过 onRecastFinished，并**逐法术手写收尾**（finishMaidWallOfFire / finishMaidThunderStep）。⚠️ 1.7.3.8 **没有**这套（所以「女仆 recast 不支持」的说法只对 1.7.3.8 成立）。",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "AbstractSpell.castSpell:277-296",
+          "note": "唯一入口：扣蓝(仅首段) → onCast（法术自 addRecast）→ 有剩余则 decrementRecastCount、否则 addCooldown"
+        },
+        {
+          "level": "verified",
+          "cite": "PlayerRecasts + MagicManager.tick:57",
+          "note": "★ tick(int) 里 if (serverPlayer != null && level.getGameTime()%n==0)；而 MagicManager.tick 只遍历 level.players() ⇒ 女仆的 recast 永不超时、永不完成"
+        },
+        {
+          "level": "verified",
+          "cite": "万法皆通 1.7.3.8 全仓 grep",
+          "note": "从不调 castSpell、从不递减 recast 计数、从不调 onRecastFinished"
+        },
+        {
+          "level": "verified",
+          "cite": "onRecastFinished 形参是 ServerPlayer",
+          "note": "硬调会 NPE（各法术覆写体第一句 entity.level()；基类走 MagicHelper.MAGIC_MAAGER.addCooldown(null,...) ⇒ getEffectiveSpellCooldown((Player)null)）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 女仆失效的三重原因：① MagicData(true) → new PlayerRecasts() 无参构造 → serverPlayer == null → tick() 恒假；② 万法皆通从不调 castSpell ⇒ 计数永不递减；③ onRecastFinished 形参是 ServerPlayer。⇒ 是 R-B（可组合复现），且**已有成品可参考**。 ★★ W20 已补：本族按【spellIntent】参数化（ATTACK/SUPPORT/SUMMON），因此 heal 与 fireball 不再同分。★ 刻意【不用学派】（学派只影响属性/音效/颜色）。"
+      }
+    },
+    {
+      "id": "irons:cast_scroll",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "使用卷轴施法"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "手持卷轴"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "NONE",
+          "note": {
+            "zh_cn": "★ 玩家侧：不耗蓝、不进 CD、**施后消耗 1 个**"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "HEAL"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "女仆路径把卷轴当 SPELLBOOK 施放，且**永不消耗** ⇒ 要「类玩家」需补 `attemptRemoveScrollAfterCast`",
+      "existingImpl": "⚠️ 万法皆通当 SPELLBOOK 放，**从不消耗**（全仓无 attemptRemoveScrollAfterCast）。且 recast 法术不能从卷轴放。",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "Scroll.java:84-119 + CastSource.java:17-23"
+        },
+        {
+          "level": "verified",
+          "cite": "IronsSpellbooksProvider#getCastSource:247-270"
+        }
+      ]
+    },
+    {
+      "id": "irons:spell_selection",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "选定要放的法术"
+      },
+      "summary": {
+        "zh_cn": "玩家侧有 4 条选择通道（法术轮盘 R / 滚轮+左Alt / 快捷槽 01–15 / 直接右键法术书）。女仆侧是**等概率随机 1 个**。"
+      },
+      "params": {
+        "channel": {
+          "values": [
+            "WHEEL",
+            "SCROLL_WHEEL",
+            "QUICK_SLOT",
+            "DIRECT_CAST"
+          ],
+          "note": {
+            "zh_cn": "轮盘 = 键 R（按住开、松手选）⇒ R-C；滚轮 = 左Alt(342)+滚轮 ⇒ R-C；快捷槽 spell_quick_cast_1..15（**默认全未绑定**）⇒ R-C；法术书右键直接施放 ⇒ 女仆已用等价路径"
+          }
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RB",
+      "reachNote": {
+        "zh_cn": "★ 玩家的 3 条**输入通道是 R-C**（GUI/滚轮/键位），但**「选哪个法术」这个决策本身是可自写的** ⇒ 对女仆而言不是缺口，而是**交给第二步的行为逻辑层**。⚠️ 注意 SpellSelectionManager 的构造要 Player。"
+      },
+      "existingImpl": "⚠️ 万法皆通：**等概率随机**（剔除 CD 中 + Config.spellBlacklist）—— 这正是本项目要取代的东西",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "KeyMappings.java:34,50-56 + ClientInputEvents.java:56-71,114-119",
+          "note": "V=施放、R=轮盘、左Alt+滚轮=切换、quick_cast_1..15"
+        },
+        {
+          "level": "verified",
+          "cite": "IronsSpellbooksProvider#initiateCasting:142-161",
+          "note": "random 选一个"
+        }
+      ],
+      "role": "mechanism",
+      "note": {
+        "zh_cn": "　★ role=mechanism：选法术的 UI/轮盘机制（R-C），不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      }
+    },
+    {
+      "id": "irons:spellbook_exclusivity",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "touhou_little_maid_spell",
+      "displayName": {
+        "zh_cn": "法术书互斥占用（同类只能装 1 本）"
+      },
+      "summary": {
+        "zh_cn": "★ 这是**万法皆通自己的设计**，不是 Iron's 的限制 —— 我们应当解除。"
+      },
+      "exclusivity": [
+        {
+          "group": "irons_spellbook_slot",
+          "slots": 1,
+          "scope": "maid",
+          "note": {
+            "zh_cn": "★ 只对**主手/副手/背包**生效；**Curios 槽里的法术书不受互斥限制、全部可施放**（万法皆通自己的不一致）。判定是 `k.isAssignableFrom(c) || c.isAssignableFrom(k)`（比的是物品**类**的继承关系）；铁魔法 14 本书全在 SpellBook 树上 ⇒ 互相冲突。Scroll 不在树上 ⇒ 「1 本铁魔法书 + 1 张卷轴」可共存，两张卷轴互斥。"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "默认只能装 1 本 ⇒ 同时只有 5~12 个法术可用"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 解除即可（ISS 侧本就无此限制）。反证：玩家的 SpellSelectionManager 收 Curios 法术书槽 + 主/副手 + 4 件护甲，**不比较类**。",
+      "existingImpl": "万法皆通 IMaidSpellData#addSpellBook/canAddSpellBook:65-83；作者把这条规则写进了 spell_overlimit_core.desc3，且 1.8.2 **逐指令同构、原样保留**",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/IMaidSpellData#canAddSpellBook:65-83"
+        },
+        {
+          "level": "verified",
+          "cite": "IronsSpellbooksProvider#collectSpellsFromCuriosSlots:98-113 vs #collectSpellFromAvailableSpellBooks:116-123",
+          "note": "★ Curios 路径不受互斥约束"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 这是 `exclusivity` 字段之所以被加进 schema 的现实来源（见 docs/07 §4.2）。　★ role=mechanism：同类法术书互斥的【许可门】（万法皆通的设计），不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      },
+      "role": "mechanism"
+    },
+    {
+      "id": "irons:support_target_selection",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "支援/治疗法术的目标选择"
+      },
+      "summary": {
+        "zh_cn": "★ 玩家侧：先射线找目标，找不到再落地；学派法术各有自己的判定。女仆侧被 mixin **无条件短路成「锁定敌人」** ⇒ 22 个法术白放。"
+      },
+      "params": {
+        "spell": {
+          "ref": "使用 Utils.preCastTargetHelper 的 22 个法术",
+          "count": 22
+        }
+      },
+      "effects": [
+        {
+          "type": "HEAL"
+        },
+        {
+          "type": "APPLY_EFFECT"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 别做 HEAD 无条件短路。不注入则走原生 `Utils.preCastTargetHelper` → `Utils.raycastForEntity`（起点 eye、方向 viewVector、范围 range、膨胀 aimAssist）。✅ 女仆施法前已被 `forceLookAtTarget` 用 `lookAt(EYES, ...)` 设好 yRot + pitch ⇒ **原生路径大概率能命中**。更「类玩家」的做法：注入但**恢复 `filter` 与距离判据**，并把「法术意图（攻击/支援）→ 打谁」**提升为调度器的一等概念**，而不是塞进名叫「法术白名单」的 `blue_note`。",
+      "existingImpl": "⚠️ 万法皆通 mixin/iss/UtilsMixin#beforePreCastTargetHelper：条件 `caster instanceof EntityMaid && additionalCastData instanceof TargetEntityCastData` → HEAD `setReturnValue(true)` ⇒ **`filter` 与 `aimAssist` 一并失效**",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "mixin/iss/UtilsMixin:40-56"
+        },
+        {
+          "level": "verified",
+          "cite": "Utils.java:643-648"
+        }
+      ],
+      "role": "mechanism",
+      "note": {
+        "zh_cn": "　★ role=mechanism：支援法术的【瞄准机制】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      }
+    },
+    {
+      "id": "irons:pvp",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_scroll",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "对玩家施法（PvP）"
+      },
+      "summary": {
+        "zh_cn": "★ TLM 侧是**硬门但可覆写**：`IAttackTask.canAttack` 是 `default` 方法。"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 在自己实现的任务里覆写 `canAttack` 即可解锁（`EntityMaid.canAttack`（EntityMaid.java:1225-1228）委托给当前任务）。⚠️ 万法皆通另有 4+ 处冗余 `instanceof Player` 拦截 + AllianceManager 建同盟队伍（setAllowFriendlyFire(false)）。⚠️⚠️ **`setAllowFriendlyFire(false)` 只影响 Player 打 Player，不阻止法术伤害** ⇒ 别把「同队」当安全保证。",
+      "existingImpl": "万法皆通：完全禁止；1.8.2 已按法术粒度部分解除（playerTargetWhitelistSpellId / currentSpellCanTargetPlayer）⇒ **上游认可这个方向**",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/task/IAttackTask.canAttack（default 方法，target instanceof Player → false）"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/passive/EntityMaid.java:1225-1228"
+        }
+      ],
+      "note": {
+        "zh_cn": "建议默认关 + 主人永久豁免 + 队伍/好友系统介入。　★ role=mechanism：不能打玩家的【许可门】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      },
+      "role": "mechanism"
+    },
+    {
+      "id": "irons:mana",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "法力消耗与回复"
+      },
+      "summary": {
+        "zh_cn": "★ 已确认女仆不消耗法力 —— 且这是 **ISS 自身的结构性设计**，不是我们的偏差。"
+      },
+      "cost": [
+        {
+          "type": "NONE",
+          "note": {
+            "zh_cn": "女仆无蓝耗（已决策接受，与「白嫖」决策一致）"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RB",
+      "reachNote": {
+        "zh_cn": "若要补齐：判定必须自写（`canBeCastedBy(...Player)` 不可调，R-C），但**扣蓝与属性恢复是 R-A**（MAX_MANA / MANA_REGEN 属性可用）。⚠️ `MagicData.setMana:98-107` 在 `serverPlayer == null` 时会**跳过 `ChangeManaEvent` 的可取消语义**，但仍会 post。"
+      },
+      "existingImpl": "万法皆通 1.7.3.8 未修（368 个 class 常量池里只有 ArsNouveauProvider 引用 setMana/addMana）；1.8.2 仍未修",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "MagicManager.java:40-53,66-84",
+          "note": "每 10 tick 回 1%×MANA_REGEN；只有 SPELLBOOK/SWORD 扣蓝"
+        },
+        {
+          "level": "verified",
+          "cite": "api/spells/AbstractSpell#canBeCastedBy（形参 Player）",
+          "note": "★ R-C：mob 传不进去 ⇒ 蓝/CD/冒险模式/已学四项检查全跳过"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 与 Q7「暂时白嫖、将来也不按玩家的来」决策一致 ⇒ 本条**不做**，仅记录偏差。　★ role=mechanism：法力【资源机制】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      },
+      "role": "mechanism"
+    },
+    {
+      "id": "irons:cooldown",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "法术冷却"
+      },
+      "cost": [
+        {
+          "type": "COOLDOWN",
+          "note": {
+            "zh_cn": "玩家侧：spellCooldown × (2 − softCap(CD_REDUCTION)) × (SWORD ? mult : 1)"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RB",
+      "reachNote": {
+        "zh_cn": "万法皆通用**自研**冷却表（IMaidSpellData.spellCooldowns），**每 20 tick 一跳**，且完成/取消**一律**吃满 CD ⇒ 与玩家侧语义不同（玩家取消不吃满）"
+      },
+      "existingImpl": "万法皆通：自研冷却表",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "MagicManager.java:57-61,111-118"
+        },
+        {
+          "level": "verified",
+          "cite": "api/IMaidSpellData.java:124-158 + IronsSpellbooksProvider#completeCasting:306 / #forceCompleteCasting:289"
+        }
+      ],
+      "role": "mechanism",
+      "note": {
+        "zh_cn": "　★ role=mechanism：法术【冷却机制】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      }
+    },
+    {
+      "id": "irons:eldritch_learning",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "Eldritch 学派的学习门"
+      },
+      "summary": {
+        "zh_cn": "玩家需手持远古手稿研究学习；女仆完全绕过。⚠️ 底层数据可达，但**开这个门有雷**。"
+      },
+      "preconditions": [
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "玩家侧：AbstractEldritchSpell.canBeCastedBy 查 SyncedSpellData.isSpellLearned"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 数据层不带 Player：`SyncedSpellData.isSpellLearned(AbstractSpell)` / `learnSpell(AbstractSpell)` / `forgetAllSpells()` 都是 R-A，且 `isSpellLearned` 自带 `!needsLearning()` 短路 ⇒ **一条不写死 spellId、对未来版本自动生效的门**。⚠️ 但 `AbstractEldritchSpell.isLearned(Player)` 本身要 Player（R-C）。",
+      "existingImpl": "万法皆通：完全绕过（知识门只活在 canBeCastedBy 里，而女仆不走那条路）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "AbstractEldritchSpell.java:53-70"
+        },
+        {
+          "level": "verified",
+          "cite": "SyncedSpellData#isSpellLearned/learnSpell/forgetAllSpells（无 Player 形参）"
+        }
+      ],
+      "note": {
+        "zh_cn": "⚠️⚠️ **必须知道的雷**：女仆的 `SyncedSpellData.learnedSpells` **永远是空集**（MaidSpellEventHandler.java:135-137 只 `new SyncedSpellData(maid)`）⇒ **一旦有人打开这个门却不给学习入口，7 个 Eldritch 法术会全部失效**。建议三态配置（OFF / PLAYER_LIKE / WHITELIST）+ 主人用手稿对女仆交互的学习入口。　★ role=mechanism：邪术学派的【学习门】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      },
+      "role": "mechanism"
+    },
+    {
+      "id": "irons:spell_events",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "法术事件（SpellPreCastEvent / SpellOnCastEvent）"
+      },
+      "summary": {
+        "zh_cn": "★ 与 Goety 侧同构的问题：女仆施法不 post 事件 ⇒ KubeJS 等附属看不见。"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 主动 post `SpellPreCastEvent` / `SpellOnCastEvent`（低成本）。⚠️ ISS 自己的 mob 路径**也不 post** ⇒ 与 Goety 侧一样，这是「生态可见性」的取舍。",
+      "existingImpl": "❌ 万法皆通全仓 grep `SpellPreCastEvent|SpellOnCastEvent` **零命中**",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "万法皆通全仓 grep 零命中；ISS mob 路径同样不 post"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 与已决定的 Q13（Goety 侧 fire 事件）**保持一致**：两个施法载体都主动 post 事件，理由相同（生态可见 + 战报 A 级归因）。　★ role=mechanism：法术【事件钩子】，不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      },
+      "role": "mechanism"
+    },
+    {
+      "id": "irons:player_only_ui",
+      "kind": "atomic",
+      "carrier": "irons:spellbook_or_slot",
+      "sourceMod": "irons_spellbooks",
+      "displayName": {
+        "zh_cn": "轮盘 / 法力 HUD / 施法条 / 铭刻台"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "全部依赖客户端 GUI/渲染或 Player 身份。**不值得补**（纯表现层）。若要给玩家反馈，降级为动作栏/粒子即可。"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ClientInputEvents / 客户端 HUD 类 + 铭刻台世界交互"
+        }
+      ],
+      "role": "mechanism",
+      "note": {
+        "zh_cn": "　★ role=mechanism：玩家专属【UI】（R-C），不是动作 ⇒ 不进候选集（保留在清单里作为知识记录）。本条由子代理打分时发现（此前被启发式误填 SINGLE_DAMAGE 0.3）。"
+      }
+    }
+  ]
+}

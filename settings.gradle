@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        // mavenCentral 必须列在这里：ForgeGradle 的传递依赖（guava → checker-qual 等）
+        // 在本机 Gradle 缓存中来源是 mavenCentral，缺失时会报
+        // "No cached version available for offline mode"
+        mavenCentral()
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://maven.parchmentmc.org' }
+    }
+}
+
+rootProject.name = 'fight_like_player'

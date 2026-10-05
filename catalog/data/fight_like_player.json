@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "docs/04-开放问题.md Q8（走位进动作层）+ Q18（★ 2026-09-30 重新敲定：走位不是动作，是「步法」）+ docs/09-动作空间与评分体系.md §5.10 —— ★ 这些【不是】从某个模组勘测来的既有操作，而是本项目【新增】的动作。故 sourceMod = fight_like_player。",
+  "operations": [
+    {
+      "id": "fight_like_player:gait",
+      "kind": "family",
+      "carrier": "maid:body",
+      "sourceMod": "fight_like_player",
+      "role": "stance",
+      "displayName": {
+        "zh_cn": "步法（走位）",
+        "en_us": "Gait"
+      },
+      "summary": {
+        "zh_cn": "「脚下怎么走」的持续意图。★ 它不是一次动作，而是一个【并发槽位】：与手上的动作同时进行（可以边走边拉弓），由独立的步法循环按弹簧点选择，且是唯一的导航写入者。"
+      },
+      "params": {
+        "direction": {
+          "values": [
+            "hold",
+            "toward",
+            "away",
+            "to_owner"
+          ],
+          "count": 4,
+          "note": {
+            "zh_cn": "保持 / 靠近 / 远离 / 归位（走向主人）。★ 由 NeedAxis.MOBILITY 的【符号】驱动 —— 它是唯一有向轴，正=靠近、负=远离。"
+          }
+        },
+        "band": {
+          "ref": "catalog/carriers.json 的 preferredRange（按【载体】而不是按动作声明）",
+          "count": 18,
+          "note": {
+            "zh_cn": "★★ 站位是【载体的属性】：弓 12 格、弩 12 格、三叉戟 8 格、拔刀剑 3 格、法杖/法术书 9 格、枪 12 格、通用近战 2.5 格。⇒ 「手里拿什么就站什么距离」，与「按手持物分发动作」是同一条原理在站位维度的落地。★ 换武器时站位自动跟着变，不需要为每条动作写一遍。"
+          }
+        }
+      },
+      "preconditions": [],
+      "stateReq": [],
+      "effects": [
+        {
+          "type": "DISPLACE",
+          "note": {
+            "zh_cn": "自身位移（持续）。方向 = 远离/靠近目标，或朝主人；远离时会按 60% 远离 + 40% 朝主人加权合成（Q8：「逃跑不能乱跑，要往主人那边撤」）"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "原版 PathNavigation（Mob#getNavigation().moveTo(x,y,z,speed)）+ EntityMaid#getOwner()",
+      "existingImpl": "TLM 自己的 MaidRangedWalkToTarget / MaidAttackStrafingTask 是【每任务挂一个】的近似做法（TaskDanmakuAttack.java:63-64）；但它只做「走向目标」，没有距离带、没有后撤、且与动作层不共享一个决策源。",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "docs/04-开放问题.md Q18",
+          "note": "★ 这是【设计决定】而非勘测结论：委托方 2026-09-30 拍板 A 方案（步法＝并发槽位）。"
+        },
+        {
+          "level": "verified",
+          "cite": "EntityMaid 继承 PathfinderMob（原版寻路可用）",
+          "note": "Mob#getNavigation().moveTo / stop 是原版 API"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/task/TaskPlayerLikeCombat#createBrainTasks（2026-09-30）",
+          "note": "★ 已从 brain 移除 SetWalkTargetFromAttackTargetIfTargetOutOfReach —— 它每 tick 把「接近目标」写进 WALK_TARGET，与步法形成【双写】，实测表现为「一边后退一边被拉向敌人」。现在步法是唯一写入者。"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★★【为什么它必须是 stance 而不是 choice】（2026-09-30 实测与推导的结论，替代了旧设计）\n\n旧设计把走位做成三个原子动作（charge 突进 / retreat 后撤 / disengage 撤退&脱战）：它们进候选集、参与最近邻评分、并在执行后从弹簧里【扣减自己的向量】。实测现象：**不论注入什么向量，女仆都只是到处跑**。\n\n根因是语义错误 —— 【位移不是「可消费的需求」，而是「伺服误差」】：\n  · 「放一个 AoE ⇒ 群伤需求被满足」是消费；\n  · 「往敌人走 8 格 ⇒ 靠近需求被满足」是错的：你走到之后，下一步仍然需要继续靠近。\n⇒ 于是 charge（MOBILITY +0.8）执行后 MOBILITY 变负，retreat（MOBILITY −0.8）反而成了最近邻；retreat 执行后又把 MOBILITY 推回正 —— **两个动作互相「偿还」对方，永久震荡**。\n\n⇒ 步法的三条硬约束（缺一不可）：\n  ① 不进候选集、不参与评分、**不发布「扣减」影响器**（GaitSelector 只读弹簧点）；\n  ② 是**唯一的导航写入者**（brain 里的接近行为已移除）；\n  ③ 由**独立循环**驱动（与主/副手循环并发的第三个槽位）。\n\n★ 但「可消费的位移」仍然是动作：拔刀剑的瞬步/突进、传送类法术是**一次性、有明确代价**的位移 ⇒ 留在动作层，带 MOBILITY 向量并正常扣减。\n★ 区分标准：**「这一步走完，我还需要再走一步吗？」** 需要 ⇒ 步法；不需要 ⇒ 动作。"
+      }
+    },
+    {
+      "id": "fight_like_player:disengage",
+      "kind": "atomic",
+      "carrier": "maid:body",
+      "sourceMod": "fight_like_player",
+      "displayName": {
+        "zh_cn": "撤退 & 脱战",
+        "en_us": "Disengage"
+      },
+      "summary": {
+        "zh_cn": "跑离「对女仆有仇恨」的目标，优先朝玩家方向，并进入脱战状态（不再主动索敌）"
+      },
+      "preconditions": [],
+      "stateReq": [],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 100,
+        "note": {
+          "zh_cn": "★ 持续逃跑约 5 秒，直到脱离仇恨或局势改变。在这段时间里它【接管导航】，步法让位（GaitSelector.actionTakesNavigation）。"
+        }
+      },
+      "interruptible": {
+        "value": true
+      },
+      "effects": [
+        {
+          "type": "DISPLACE",
+          "note": {
+            "zh_cn": "持续位移，方向 = 远离仇恨源 ∧ 朝主人方向 的加权合成（60% / 40%）"
+          }
+        },
+        {
+          "type": "SET_AI_STATE",
+          "note": {
+            "zh_cn": "★ 进入「脱战」状态：清空 ATTACK_TARGET ⇒ 不再主动索敌、不再发起攻击。这是它与「步法·远离」的本质区别 —— **它是一次性决策，不是持续姿态**，因此留在动作层。"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "原版寻路 + 战斗目标清除（Brain#eraseMemory(ATTACK_TARGET) / Mob#setTarget(null)）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "docs/04-开放问题.md Q8",
+          "note": "★ 设计决定。语义由委托方原文给出：「跑离对女仆有仇恨的目标，优先玩家方向」。"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/exec/ActionExecutors#disengage（2026-09-30 拆分）",
+          "note": "★ 位移部分已改为【复用步法执行器】（gait(AWAY, 10)），自身只保留「清目标/脱战」这一条不可分摊的语义。"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 这是本清单里第一个「纯自保」动作，也是弹簧体系的最佳实证对象：MITIGATION_SURVIVAL 权重 2.0 + 低忘却率(λ=0.01) ⇒ 残血时它会压过所有输出动作。⇒ 不需要写「血少就逃跑」的规则。⚠️ SINGLE_DAMAGE/AREA_DAMAGE 取负值是刻意的：逃跑期间确实在放弃输出，这必须体现在向量里，否则弹簧会低估它的代价。"
+      }
+    }
+  ]
+}

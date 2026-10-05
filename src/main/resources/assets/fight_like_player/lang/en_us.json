@@ -1,0 +1,5 @@
+{
+  "task.fight_like_player.player_like_combat": "Player-Like Combat",
+  "task.fight_like_player.player_like_combat.desc": "Fights at the granularity of a player's operations: close in and attack with the held weapon. Currently behaves like the vanilla Attack task, serving as the baseline for player-like combat.",
+  "task.fight_like_player.player_like_combat.condition.assault_weapon": "Requires a weapon with attack damage in the main hand"
+}

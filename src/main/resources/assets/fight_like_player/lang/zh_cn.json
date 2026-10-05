@@ -1,0 +1,5 @@
+{
+  "task.fight_like_player.player_like_combat": "拟人战斗",
+  "task.fight_like_player.player_like_combat.desc": "以玩家的操作粒度进行战斗：接近敌人并用主手武器发起攻击。目前行为与原版「攻击」任务一致，作为「类玩家」的基线。",
+  "task.fight_like_player.player_like_combat.condition.assault_weapon": "需要主手持有具备攻击伤害的武器"
+}

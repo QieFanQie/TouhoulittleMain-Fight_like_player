@@ -1,0 +1,350 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "docs/09-动作空间与评分体系.md §4.1-§4.4 —— 载体解析的规则表。★ 这是「物品 → 载体」的映射，与「动作 → 载体」的映射（在 data/*.json 的 carrier 字段）方向相反，两者合起来才能从「女仆持有什么」推出「她能做什么」。",
+  "notes": {
+    "zh_cn": "匹配方式优先级：itemTag（纯数据最稳） > itemId > javaInstanceOf（需类型名集合，由适配器提供）。★ 所有 requiresMod 未装则整条规则不加载。★ matchMode=simpleName 时只比类名（不含包），用于抵御附属换包名 —— 这是从调律师的 ApiCompatLayer 学来的思路。★★ preferredRange = 「拿着这类东西时希望站多远」（格），它是【步法】的输入，见 decision/GaitSelector。⚠️ 它【不是勘测结论】而是【设计判断】（provenance=design）：与玩家一致 —— 弓手拉开、剑士贴身。未声明者取兜底 2.5。"
+  },
+  "rules": [
+    {
+      "carrier": "maid:body",
+      "requiresMod": null,
+      "match": {
+        "kind": "always"
+      },
+      "preferredRange": 2.5,
+      "slots": [],
+      "note": {
+        "zh_cn": "★ 无载体动作：空手近战、走位、撤退&脱战。不需要任何物品 ⇒ 永远命中 ⇒ 是 A=∅ 时的天然回退来源。★ 它同时是【步法】的载体（走位不再作为原子动作参与评分）。"
+      }
+    },
+    {
+      "carrier": "maid:weapon",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "itemAttribute",
+        "attribute": "minecraft:generic.attack_damage"
+      },
+      "preferredRange": 2.5,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 判据与 TLM 的 isWeapon 完全一致：stack.getAttributeModifiers(MAINHAND).containsKey(ATTACK_DAMAGE)（TaskAttack.java:108-110）。⚠️ TLM 只查主手，我们查全部持有位置（委托方 M2 注记）。"
+      }
+    },
+    {
+      "carrier": "maid:shield",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "ShieldItem",
+        "matchMode": "simpleName"
+      },
+      "slots": [
+        "OFFHAND"
+      ],
+      "note": {
+        "zh_cn": "原版盾。TLM 只在副手用（MaidUseShieldTask）。"
+      }
+    },
+    {
+      "carrier": "maid:extinguisher",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "itemId",
+        "itemId": "touhou_little_maid:extinguisher",
+        "fallback": {
+          "kind": "javaInstanceOf",
+          "target": "ExtinguisherItem",
+          "matchMode": "simpleName"
+        }
+      },
+      "slots": [
+        "OFFHAND"
+      ],
+      "note": {
+        "zh_cn": "⚠️ itemId 未能查证（InitItems.EXTINGUISHER 的注册名未在调研中记录），故带 fallback 类名匹配。★ 按 Q16 决策：它只是一个普通动作，不做任何特殊处理。"
+      }
+    },
+    {
+      "carrier": "maid:bow",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "BowItem",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 12.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ]
+    },
+    {
+      "carrier": "maid:crossbow",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "CrossbowItem",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 12.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ]
+    },
+    {
+      "carrier": "maid:trident",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "TridentItem",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 8.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ]
+    },
+    {
+      "carrier": "maid:danmaku",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "unresolved",
+        "reason": "TLM 弹幕物品的判定类未在调研中记录（TaskDanmakuAttack 用的是 DataItem 还是专用 Item 未查证）"
+      },
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "⚠️ 【未能查证】⇒ 按 fail-closed 处理：本规则永不命中，并记为 CARRIER_RULE_UNRESOLVED。这是显式登记缺口，不是静默失败。"
+      }
+    },
+    {
+      "carrier": "maid:throwable",
+      "requiresMod": "touhou_little_maid",
+      "match": {
+        "kind": "unresolved",
+        "reason": "「可投掷物」是一个行为判定（MaidShootTargetAnyItemTask），不是类型判定，需要读该类才能确定判据"
+      },
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "⚠️ 【未能查证】⇒ fail-closed，记为 CARRIER_RULE_UNRESOLVED。"
+      }
+    },
+    {
+      "carrier": "superbwarfare:gun",
+      "requiresMod": "superbwarfare",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "GunItem",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 12.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★★ 第十七轮（枪械审计 B1/B2）：这条规则原来叫 maid:gun、判据是 IGun —— 那与 tacz:gun 【判据完全相同、精度也相同】⇒ 一把 TaCZ 枪**同时命中两条规则** ⇒ maid_native:gun_shot 与 tacz:shoot 两个开火 id 一起进候选（同一个执行器、两套冷却、承诺还不同：20 vs 0）。现在按【枪包】把两条规则分开：本条只认**卓越前线**的 GunItem。★ 取证：modid = superbwarfare（TLM 的 SWarfareCompat.MOD_ID 常量池 ldc 字符串 superbwarfare）；判据 = SWarfareCompatInner.isGun 里的 instanceof com.atsuishio.superbwarfare.item.gun.GunItem。★ 于是两者的并集恰好等于 TLM 自己的 GunCommonUtil.isGun（= TacCompat.isGun || SWarfareCompat.isGun），不重叠、不缺。★ matchMode 是 simpleName 的**精确相等**（CarrierRule:198-199）⇒ ModernKineticGunItem 不会被误判成 GunItem。★ slots 放开到 5 处：执行器会先把枪换到手上（TLM 的 gun_attack 只认主手，但我们不该因此做不出动作）。★ preferredRange 12：枪战是中距离，但远小于弓（不需要抛射补偿）。"
+      }
+    },
+    {
+      "carrier": "tacz:gun",
+      "requiresMod": "tacz",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "IGun",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 12.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 与 maid:gun 同一个判据，但载体不同（一个是 TLM 的任务，一个是 TaCZ 的完整操作面 14 条）。★ 我们查全部持有位置，**解除 TLM「只认主手」的限制** —— 这正是委托方 M2 注记的要求。"
+      }
+    },
+    {
+      "carrier": "slashblade:blade",
+      "requiresMod": "slashblade",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "ItemSlashBlade",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 3.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "31 条动作的载体。判据与 TLM 的 SlashBladeCompat.isSlashBladeItem 一致。★ preferredRange 3（略大于通用近战 2.5）：SA / 幻影剑是中距离起手。"
+      }
+    },
+    {
+      "carrier": "goety:wand_with_focus",
+      "requiresMod": "goety",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "IWand",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 9.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 判据 = instanceof IWand（与调律师的 isMatchingItem、CastChannel.java:360 的起手检查一致）。⚠️ 还需「杖里有聚晶」才真正可施法 —— 那属于动作级 precondition，由上下文事实提供。"
+      }
+    },
+    {
+      "carrier": "goety:command_horn",
+      "requiresMod": "goety",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "CommandHorn",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 4.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 2026-10-01 从 unresolved 修好：物品类 = `com.Polarice3.Goety.common.items.magic.CommandHorn`。玩家侧用它做「8 格（实为 16³）范围广播五种姿态」；女仆侧我们**读它的 NBT Mode 键**再广播给仆从（= 玩家按号角的行为），全程没有 Player 形参。"
+      }
+    },
+    {
+      "carrier": "goety:focus_recall",
+      "requiresMod": "goety",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "RecallFocus",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 6.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 2026-10-01 从 unresolved 修好：物品类 = `com.Polarice3.Goety.common.items.magic.RecallFocus`（`RecallFocus.java:93` 的 `hasRecall/recall` 都是 static，只吃 LivingEntity）。⚠️ 生效前提是这份聚晶里**真的存过坐标**（`hasRecall==true`），否则 `recall` 会静默返回 false —— 我们在执行器里先判一次，好让「做不了」变成可见的事实。"
+      }
+    },
+    {
+      "carrier": "irons:spellbook_or_scroll",
+      "requiresMod": "irons_spellbooks",
+      "match": {
+        "kind": "capability",
+        "key": "irons:isSpellContainer"
+      },
+      "preferredRange": 9.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★ 真正的判据是静态谓词 ISpellContainer.isSpellContainer(stack)（即 NBT 有 ISB_Spells），它【不是类型判定】⇒ 用 capability（适配器算好的具名谓词）而不是 instanceof。这样同时也覆盖了卷轴 Scroll —— 它不在 SpellBook 继承树上却是合法法术容器（ironspells-gap-analysis §4.2）。"
+      }
+    },
+    {
+      "carrier": "irons:spellbook_or_slot",
+      "requiresMod": "irons_spellbooks",
+      "match": {
+        "kind": "capability",
+        "key": "irons:isSpellContainer"
+      },
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ]
+    },
+    {
+      "carrier": "pillagersgun:gun",
+      "requiresMod": "pillagers_gun",
+      "match": {
+        "kind": "unresolved",
+        "reason": "★ Pillager\u0027s Gun（modid = pillagers_gun，实测其 jar 的 META-INF/mods.toml）自己的枪械接口未勘测。⚠️ 第十七轮更正：这里原来写的是「卓越前线」—— 那是**两个模组串名**（卓越前线是 superbwarfare，已单列为 superbwarfare:gun）。本次仍未勘测它的 GunItem ⇒ 保持 unresolved（fail-closed，缺口显式可见）。"
+      },
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ]
+    },
+    {
+      "carrier": "goety:wand",
+      "requiresMod": "goety",
+      "match": {
+        "kind": "javaInstanceOf",
+        "target": "IWand",
+        "matchMode": "simpleName"
+      },
+      "preferredRange": 9.0,
+      "slots": [
+        "MAINHAND",
+        "OFFHAND",
+        "INVENTORY",
+        "MAID_BACKPACK",
+        "CURIOS"
+      ],
+      "note": {
+        "zh_cn": "★★ 2026-10-01 新增（委托方第 2 条）：判据只要求【有法杖】，不再要求杖里已经装着聚晶 —— 因为执行器现在会【自动把聚晶装进法杖】（GoetyFocusOps#install，有旧的就调换位置、没有就填充，与玩家侧 CSwapFocusPacket#swapFocus 同构），而聚晶可以从物品栏 / 聚晶包 / 多晶大袋里找。⇒ 只有这样，女仆的动作选项里才【包含所有可选的法术】。★ 原来那条 goety:wand_with_focus 仍保留，供仆从管理类动作用。"
+      }
+    }
+  ]
+}

@@ -1,0 +1,603 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "docs/01-操作清单.md §4 + _research/goety-operations.md + _research/ichargingspell-closure-*.txt + _research/goety-spell-events.md（证据：Goety 2.5.56.5 源码）",
+  "operations": [
+    {
+      "id": "goety:cast_focus",
+      "kind": "family",
+      "carrier": "goety:wand",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "施放聚晶",
+        "en_us": "Cast Focus"
+      },
+      "summary": {
+        "zh_cn": "125 个法术不是 125 条记录：共享 5 个变体维度。潜行维度有 8 类互不相同的语义，由基类 Spell.isShifting(caster) 统一判定。"
+      },
+      "params": {
+        "focus": {
+          "ref": "ForgeRegistries.ITEMS 里全部实现 com.Polarice3.Goety.api.items.magic.IFocus 的物品",
+          "count": 124,
+          "note": {
+            "zh_cn": "124 个物品 = 118 个 MagicFocus（可施法）+ 5 个控制类 + 1 个 empty_focus。法术类共 125 个。"
+          }
+        },
+        "sneaking": {
+          "values": [
+            "false",
+            "true"
+          ],
+          "note": {
+            "zh_cn": "★ 判定入口 Spell.java:71-73：(isCrouching() || isShiftKeyDown()) && !WandUtil.findWand(caster).isEmpty() —— 第二条件（持法杖）也必须满足。潜行的语义有 8 类，不可假设「潜行 = 某一种效果」：A 召回仆从(23) / B 消灭自己的召唤物(2) / C 切换弹道破坏地形旗标(5，其中凋灵骷髅头反向) / D 改瞄准或位移(2) / E 换召唤物或结构(2) / F 把增益给友方而非自己(3) / G AoE 改为环绕自身(4) / H 纯抑制。"
+          }
+        },
+        "aim": {
+          "values": [
+            "TARGET",
+            "BLOCK"
+          ],
+          "note": {
+            "zh_cn": "Spell.getTarget：若 caster 是 Mob 则直接用 mob.getTarget()（女仆天然走这一支，不需要模拟准心）；否则射线。法术普遍写作 if (target != null) {...} else if (rayTraceResult instanceof BlockHitResult) {...}"
+          }
+        },
+        "castMode": {
+          "values": [
+            "INSTANT",
+            "CHARGED",
+            "CHANNEL",
+            "EVER_CHARGE",
+            "BREATHING",
+            "TOUCH",
+            "BLOCK",
+            "SUMMON"
+          ],
+          "note": {
+            "zh_cn": "★ 由基类 + 谓词决定，没有 CastType 枚举（别去发明）。CHANNEL 的具体法术可用接口闭包枚举，见 castChannelSpells 参数。"
+          }
+        },
+        "castChannelSpells": {
+          "ref": "IChargingSpell 的传递闭包（工具：D:\\tiaolvshi\\scripts\\scan_charging_spells.py）",
+          "count": 22,
+          "note": {
+            "zh_cn": "★★ 实测（诡厄使徒1.3.1，55962 个 class / 202 jar）：闭包 26 个类 − 4 个基类/接口 = 22 个具体长按法术。本体恒 19 个：箭雨/暴雪/轰炸/掘地/腐化光束/进食/炎呼/飞翔/霜呼/吸取/流星雨/震撼/蒸汽/涌动/虫群/原力/防护/水流/旋风。★ 加附属自动扩表：测试用模组 26、灾厄巫咒 34 ⇒ 用接口闭包代替手写清单，不需要改代码。"
+          }
+        },
+        "dangerous": {
+          "values": [
+            "false",
+            "true"
+          ],
+          "note": {
+            "zh_cn": "仅 C 组：潜行把弹射物的 griefing 旗标切掉（凋灵骷髅头是反向：潜行使之变危险）"
+          }
+        },
+        "focusCategory": {
+          "ref": "★ 本项目【自定义】的 8 类细分。⚠️ 调律师的 FocusCategory 只有 4 类（ATTACK/DEFENSE/SUMMON/OTHER，见 goety-tuner focus/FocusCategory.java:16-20），它可作为粗粒度回退。",
+          "values": [
+            "ATTACK_SINGLE",
+            "ATTACK_AREA",
+            "SUMMON",
+            "UTILITY",
+            "PROTECTION",
+            "HEALING",
+            "CONTROL",
+            "SERVANT_MGMT"
+          ],
+          "count": 8,
+          "fallback": {
+            "ATTACK": [
+              "ATTACK_SINGLE",
+              "ATTACK_AREA"
+            ],
+            "DEFENSE": [
+              "PROTECTION",
+              "HEALING"
+            ],
+            "SUMMON": [
+              "SUMMON",
+              "SERVANT_MGMT"
+            ],
+            "OTHER": [
+              "UTILITY",
+              "CONTROL"
+            ]
+          },
+          "note": {
+            "zh_cn": "★★ 出处如实说明：这 8 类【不是】调律师的枚举（它只有 4 类），而是本项目为了区分『单体攻击 vs 范围攻击』等战术差异而自定义的细分。⇒ 要在运行期拿到这 8 类，需要【我们自己的分类器】（登记 W32）；若只拿得到调律师的 4 类，按 fallback 映射回退到 4 类的覆写。★ 之前的 ref 把它标注成了调律师的枚举 —— 那是错的，已修正。（本条由子代理打分时发现并核对源码后确认）"
+          }
+        }
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "必须持有法杖（IWand）。★ 2026-10-01：不再要求\"杖里已有聚晶\" —— 聚晶由执行器自动装（见 note）。"
+          }
+        },
+        {
+          "type": "spellConditionsMet",
+          "fact": "goety:can_cast",
+          "note": {
+            "zh_cn": "★★ 2026-10-01 放宽：现在是「有法杖 且 任意持有位置（物品栏/聚晶包/多晶大袋/杖内）有一颗能用的聚晶」（GoetyExecutors#canCastWithAnyHeldWand）。原判据只认\"杖里已装聚晶\" ⇒ 背包里囤一堆聚晶等于不存在。"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "NONE",
+          "note": {
+            "zh_cn": "★ 已知偏差（已决策接受）：直调 API 会绕过 DarkWand 的扣费（其扣费在 caster instanceof Player 分支内），且 IWand.isOnCooldown 对非 Player 恒返回 false ⇒ 女仆不耗灵魂、不受聚晶冷却。潜行施法还会跳过 summonLimit（默认 64）。见 docs/01 §4.6 与 docs/04 Q7。"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★★ 2026-10-01 修：族默认从 INSTANT 改成 COMMIT 20（兜底 1 秒）。为什么必须是非零：这个动作的三种生命期（瞬发 / 定长引导 / 蓄力长按）【在决策期根本无法区分】—— 形态由执行器在运行时读 spell.castDuration 才知道（见 GoetyChannel.Mode）。若承诺为 0，引导法术起手后【不进承诺】⇒ 主循环下一周期就会另选一个动作，一边引导一边干别的。★ 真值仍以【执行器回报完成】为权威（docs/09 §5.3）：GoetyChannel 收尾时回报 COMPLETED，所以 20 只是「执行器没回报时的兜底」。⚠️⚠️【千万不要把 castDuration 当作「持续时长」】：IChargingSpell.defaultCastDuration() 返回的是 **72000**（= 1 小时，那是「不松手就一直放」的硬上限，见 IChargingSpell.java:17-19 与 ChargingSpell.java:10）。调律师为此踩过坑并留下结论（goety-tuner CastChannel.java:501-510）：蓄力段与持续段【互不重叠、必须分别给预算、两段相加】。"
+        }
+      },
+      "durationOverrides": {
+        "CHARGED": {
+          "kind": "COMMIT",
+          "ticks": 20,
+          "note": {
+            "zh_cn": "★ 蓄力法术的承诺 = spell.castDuration(caster, staff)（ISpell.java:187-194）⇒ 每个法术不同，源码默认值举例：fireball 20 / rotting 20 / osseous 60 / prisma_beam 80 / vexing 100 / recall 160（SpellConfig 的 defineInRange 默认值）。⚠️ 20 只是【族兜底值】（火球这一档），真值只有运行时读法术才知道 ⇒ 权威来源是执行器回报完成（W23 的聚晶类别/时长参数化仍待做）。ⓘ【这组 durationOverrides 目前是惰性的】：它们按【载体物品的参数】查表（ActionSpec#pickCommitment(param)，键 = 剑 SA 那种「物品自带的取值」），而这个动作的「参数」其实是【执行器运行时挑出来的那颗聚晶】—— 决策期不知道 ⇒ 永远查不中。留着是为了记录口径，真正的长度在 GoetyChannel 里按形态算（它比这里准：它拿得到 spell 实例）。"
+          }
+        },
+        "CHANNEL": {
+          "kind": "CHANNEL",
+          "chargeTicks": 20,
+          "sustainTicks": 100,
+          "note": {
+            "zh_cn": "★ 长按通道法术：前摇 = spell.castUp(caster, staff)（IChargingSpell.java:21-31；默认 0，但 ArrowRain 等是 20），持续段 = 【松手才结束】⇒ 源码里【没有】sustainTicks 这个量（唯一硬上限是 castDuration = 72000）。⇒ chargeTicks 20 取自 ArrowRain 这一档，sustainTicks 100 是【我们的重评估周期】。⚠️ 调律师的原文警告：写成「总时长 = 上限、蓄力从里面扣」会让 ArrowRain（castUp 20）只剩 1 tick 开火 ⇒ 看起来「只闪一下」。⚠️ 另据 DarkWand.getUseDuration 的 NBT 机制：Mob 手里的法杖**不跑 inventoryTick** ⇒ 「Cast Time」键不会被写 ⇒ startUsingItem 会当 tick 完成 ⇒ 走 finishUsingItem（→ MagicResults 的非玩家分支）。要真支持通道法术必须自备惰性 IWand（W35）。"
+          }
+        },
+        "BREATHING": {
+          "kind": "CHANNEL",
+          "chargeTicks": 0,
+          "sustainTicks": 100,
+          "note": {
+            "zh_cn": "★ 吐息类：与 CHANNEL 同处理（持续段无源码常量，100 是我们的重评估周期）。"
+          }
+        },
+        "EVER_CHARGE": {
+          "kind": "CHANNEL",
+          "chargeTicks": 0,
+          "sustainTicks": 100,
+          "note": {
+            "zh_cn": "★ EverCharge：Cooldown() 恒返回 0（EverChargeSpell.java:4-12）⇒ 松手才停。"
+          }
+        }
+      },
+      "interruptible": {
+        "value": true,
+        "note": {
+          "zh_cn": "CHANNEL 型在被打断时必须 stopUsingItem，否则光束实体永不消失"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "SUMMON",
+          "note": {
+            "zh_cn": "召唤类"
+          }
+        },
+        {
+          "type": "DISPLACE",
+          "note": {
+            "zh_cn": "位移类"
+          }
+        },
+        {
+          "type": "APPLY_EFFECT",
+          "note": {
+            "zh_cn": "增益/防护类；F 组潜行时可改为施加给友方"
+          }
+        },
+        {
+          "type": "TELEPORT",
+          "note": {
+            "zh_cn": "A 组潜行 = 把已有仆从传送到施法者身边"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ 直调 spell.SpellResult(ServerLevel, LivingEntity, ItemStack, SpellStat)，等价于官方 mob 入口 Spell.mobSpellResult(LivingEntity, ItemStack[, SpellStat])（Spell.java:49-61 → serverCheckSpellResult → SpellResult）。⚠️ 绝不能走物品路径：DarkWand.MagicResults 有 caster instanceof Player 硬门，非玩家会走 failParticles + FIRE_EXTINGUISH（每 tick 冒 10~44 个白烟 + 灭火音，且不放法术）。且 CHANNEL 型必须自己维持 startUsingItem（AbstractBeam.tick 要求 MobUtil.isSpellCasting），并用一把 onUseTick 空实现的自备 IWand（否则触发上面那个白烟分支）。",
+      "existingImpl": "调律师 CastChannel + TunerWand（完整）；万法皆通 GoetyProvider（★ 不完整：从不 startUsingItem ⇒ 光束类整族自毁）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "common/magic/Spell.java:71-73",
+          "note": "isShifting 定义（含持法杖条件）"
+        },
+        {
+          "level": "verified",
+          "cite": "common/magic/Spell.java:49-61,92-103",
+          "note": "mobSpellResult 链路；getTarget 对 Mob 走 mob.getTarget()"
+        },
+        {
+          "level": "verified",
+          "cite": "api/magic/ISpell.java:243",
+          "note": "SpellResult(ServerLevel, LivingEntity, ItemStack, SpellStat) —— 只要 LivingEntity"
+        },
+        {
+          "level": "verified",
+          "cite": "api/items/magic/IWand.java:102-108",
+          "note": "isNotInstant / notTouch / cannotCast 三布尔；没有 CastType 枚举"
+        },
+        {
+          "level": "verified",
+          "cite": "_research/ichargingspell-closure-*.txt",
+          "note": "IChargingSpell 闭包实测 26/30/38（三个实例）"
+        },
+        {
+          "level": "verified",
+          "cite": "common/magic/spells/（41 处 isShifting，8 类语义）",
+          "note": "详见 _research/goety-operations.md"
+        },
+        {
+          "level": "verified",
+          "cite": "common/items/magic/DarkWand.java:762-845 + api/items/magic/IWand.java:88-95",
+          "note": "Player 硬门 + 冷却对非 Player 恒 false"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 2026-10-01（委托方第 2 条）：载体从 goety:wand_with_focus 改为 goety:wand —— 判据只要求「有法杖」，因为执行器现在会自动把聚晶装进法杖（GoetyFocusOps#install：有旧的就调换位置、没有就填充，与玩家侧 CSwapFocusPacket#swapFocus 同构），而聚晶可以从【物品栏 / 聚晶包 / 多晶大袋 / 杖内】任意一处找。⇒ 女仆的动作选项因此【包含所有可选的法术】。★ 前置 goety:can_cast 也随之放宽为「有法杖 且 至少有一颗能用的聚晶」。"
+      }
+    },
+    {
+      "id": "goety:execute_servant",
+      "kind": "atomic",
+      "carrier": "goety:wand_with_focus",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "处死指定的一个仆从",
+        "en_us": "Execute a specific servant"
+      },
+      "summary": {
+        "zh_cn": "玩家侧：潜行 + 左键攻击自己的某个仆从。★ 与 dismiss_temporary_servants 是两条独立动作。"
+      },
+      "params": {
+        "target": {
+          "ref": "自己拥有的 IOwned 仆从实体",
+          "note": {
+            "zh_cn": "★ 决策层要选目标 —— 这正是它与批量版的本质区别"
+          }
+        }
+      },
+      "preconditions": [
+        {
+          "type": "hasServant",
+          "note": {
+            "zh_cn": "目标必须是自己的仆从（IOwned#getTrueOwner() == 自己）。★★ 2026-10-01：这一条**现在真的能被满足了** —— `MaidSnapshot` 开始投喂仆从数（`GoetyServantOps#servantCount`，W23 的这一半关闭）。"
+          }
+        }
+      ],
+      "stateReq": [],
+      "cost": [
+        {
+          "type": "NONE"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 60,
+        "note": "★★ 60 tick = 「两段确认」窗口：首次处死只是 warnKill（Summoned.java:512-515 里把 killChance 置 60），60 tick 内再处死一次才真死（Summoned.java:517-519 hurt(DISMISSED, MAX_VALUE)）；每 tick 减 1（IServant.java:355-360）。⚠️ 字段名是 killChance 不是 warnKill。⚠️ 三个例外【没有窗口】：Malghast（:274-276 直接 lifeSpanDamage）、SlimeServant（:328-334 走 lifeSpanDamage）、AbstractSpiderServant（:483-485 一次即死；其 :478-481 的 warnKill 是死代码）⇒ 旧记录里列的 14 个重型仆从含 SlimeServant/Malghast 是错的。"
+      },
+      "effects": [
+        {
+          "type": "DESPAWN",
+          "note": {
+            "zh_cn": "hurt(goety:dismissed, Float.MAX_VALUE) ⇒ 死亡信息「%1$s被彻底摧毁了」"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "女仆侧等价实现：IOwned#dismiss()（IOwned.java:377-381），或直接 hurt(goety:dismissed 伤害源, Float.MAX_VALUE)。★ 绕过 IServant#tryKill(Player) 的签名（那个收 Player）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "common/items/magic/DarkWand.java:215-227",
+          "note": "潜行左键自己的仆从 -> IServant.tryKill(player)"
+        },
+        {
+          "level": "verified",
+          "cite": "common/entities/ally/Summoned.java:517-519",
+          "note": "hurt(DISMISSED, Float.MAX_VALUE)"
+        },
+        {
+          "level": "verified",
+          "cite": "config/SpellConfig.java:693-694",
+          "note": "OwnerHitKill：0=潜行左键（默认）/1=潜行右键/2=禁用"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/goety/lang/zh_cn.json:1366",
+          "note": "info.goety.servant.tryKill = 「你确定要消灭%s?」"
+        },
+        {
+          "level": "verified",
+          "cite": "14 个覆写 tryKill 的重型仆从类（Wildfire / AbstractNecromancer / GraveGolem / RedstoneGolem / BlackBeast / ModRavager / RedstoneMonstrosity / RaiderServant / BoundEvoker / BoundIceologer / ElderGuardianServant / SlimeServant / AllyTrampler / AbstractBroodMother）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 已按需求方要求与批量版**拆成两个独立功能**：合成一条会导致「想处死一个却全杀了」这类不可逆事故。"
+      }
+    },
+    {
+      "id": "goety:dismiss_temporary_servants",
+      "kind": "atomic",
+      "role": "directive",
+      "carrier": "goety:wand_with_focus",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "处死所有临时仆从",
+        "en_us": "Dismiss all temporary servants"
+      },
+      "summary": {
+        "zh_cn": "玩家侧：按一个绑定键（Goety 键名 key.goety.dismiss，中文「消灭临时仆从」；实测默认是小键盘 `.`）。★ 无参、群体、受坚守白名单约束。"
+      },
+      "preconditions": [
+        {
+          "type": "hasServant",
+          "note": {
+            "zh_cn": "★ 2026-10-01 补：没有仆从 ⇒ 清理 0 个 = 空操作。"
+          }
+        }
+      ],
+      "stateReq": [],
+      "cost": [
+        {
+          "type": "NONE"
+        }
+      ],
+      "duration": {
+        "kind": "INSTANT",
+        "note": "★ 0 —— 批量 dismiss 是同步循环（CDismissServantsPacket.java:23-41 遍历 + dismiss()），没有计时器。"
+      },
+      "effects": [
+        {
+          "type": "DESPAWN",
+          "note": {
+            "zh_cn": "对每个符合条件者调 IOwned#dismiss()"
+          }
+        }
+      ],
+      "reach": "RB",
+      "reachEntry": "复刻 CDismissServantsPacket.java:23-41 的循环：遍历全服筛 getTrueOwner()==自己 && isLimitedLife() && 不在坚守白名单 ⇒ owned.dismiss()。dismiss() 本身不吃 Player，但 ★ 白名单 SEHelper.getGroundedEntities/Types 全要 Player ⇒ 女仆需自建白名单",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "client/events/ClientEvents.java:1342-1344",
+          "note": "按键 -> CDismissServantsPacket"
+        },
+        {
+          "level": "verified",
+          "cite": "common/network/client/CDismissServantsPacket.java:23-41",
+          "note": "服务端处理：遍历 + 筛选 + dismiss()"
+        },
+        {
+          "level": "verified",
+          "cite": "api/entities/IOwned.java:377-381",
+          "note": "dismiss() = hurt(DISMISSED, MAX_VALUE)"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/goety/lang/zh_cn.json:3257,2912",
+          "note": "key.goety.dismiss = 「消灭临时仆从」；death.attack.goety.dismissed = 「%1$s被彻底摧毁了」"
+        },
+        {
+          "level": "inferred",
+          "cite": "lang 不含默认键位（键位在代码里设定）",
+          "note": "实测默认键为小键盘 `.`；需求方记忆是「，」——很可能是同一个键的不同称呼。清单按功能语义记录，不写死键位"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 与单体版是两条独立动作，理由见 goety:execute_servant。",
+        "zh_cn_round17": "★★ 第十七轮（委托方第 4 条）：本条改为 role=directive —— **永不进候选集**，只有上层指令（女仆 LLM / 动态指挥 LLM）下的瞬间指令 dismiss_servants 才能触发它。理由：委托方实测「女仆召唤时，有时还是会触发『潜行施法则杀死它们所有』」，而这属于不可逆的自伤行为 ⇒ 主动 ban 掉，指令侧则升级为「处死她名下**全部**仆从（Goety + 铁魔法召唤物）」。"
+      }
+    },
+    {
+      "id": "goety:recall_servants",
+      "kind": "atomic",
+      "carrier": "goety:wand_with_focus",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "召回仆从到身边",
+        "en_us": "Recall servants"
+      },
+      "summary": {
+        "zh_cn": "潜行施法（8 类变体之 A 组，23 个法术继承）—— 本清单里潜行维度最大的一类。"
+      },
+      "params": {
+        "summonFamily": {
+          "ref": "继承 SummonSpell.commonResult 的 23 个召唤法术"
+        }
+      },
+      "stateReq": [],
+      "effects": [
+        {
+          "type": "TELEPORT",
+          "note": {
+            "zh_cn": "对 getTrueOwner() == 施法者 的仆从 moveTo(施法者位置)"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★★ 2026-09-30 修正（原记录是【危险路线】，已作废）：**直调 `SummonSpell#teleportServants(LivingEntity owner, Entity servant)`**（SummonSpell.java:121-127，签名只吃 LivingEntity）⇒ 等价效果、语义唯一、不碰施法路径。\n\n❌ 原记录写「`maid.setShiftKeyDown(true)` + 手持法杖，然后正常施法即可（isShifting 会自然为真）」——**不要这么做**：① `Spell.isShifting`（Spell.java:71-73）的**第二个条件**是 `!WandUtil.findWand(caster).isEmpty()`，手上没杖时 `isShifting==false` ⇒ `SummonSpell.commonResult:85` 会走【召唤】分支，**不可逆的语义反转**（想召回却召唤了一群）；② `setShiftKeyDown` 是**持久共享 flag**，我们自己在 MaidSnapshot 里读 `isCrouching()`，改它会污染其它判断。\n★ 另注：跨维度遍历的坑见 `EntityFinder.getLivingEntityByUuiD`（忽略传入 level、遍历所有维度）⇒ `getTrueOwner()==maid` 对**跨维度**仆从也成立，实现时必须自加 `servant.level() == maid.level()` 门。",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "common/magic/SummonSpell.java:83-100",
+          "note": "commonResult 的潜行分支"
+        },
+        {
+          "level": "verified",
+          "cite": "common/magic/SummonSpell.java:121-127",
+          "note": "teleportServants(owner, servant)：判 IOwned#getTrueOwner() == owner"
+        },
+        {
+          "level": "verified",
+          "cite": "common/magic/SummonSpell.java:73",
+          "note": "★ 潜行时跳过 summonLimit 检查（默认 64）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 2026-09-30：**stateReq 里的 SNEAKING 已删除**。原因：那是【玩家侧触发语法】的描述（玩家要蹲下右键才会走 recall 分支），而 ① 女仆侧是**显式决策**，不需要潜行；② 女仆**根本潜行不了**（没有客户端输入）；③ 我们改成**直调 `teleportServants`**，根本不经过 `isShifting` 那条分支。⇒ 留着 SNEAKING 只会让这条动作在游戏里永远拿不到。\n★ 相关陷阱（保留在案）：如果一个 mob 施法者的蹲姿被 `isCrouching()` 判为真，召唤类法术会静默变成召回（什么都不发生）；调律师因此覆写 `isCrouching()` 返回 false。"
+      },
+      "duration": {
+        "kind": "INSTANT",
+        "note": "★ 效果的延迟是 0（SummonSpell.java:121-127 直接 moveTo）；承载它的【施法】时长 = 该聚晶的 castDuration：call_focus 100 / troop_focus 100（SpellConfig.java:1730-1739）。"
+      },
+      "preconditions": [
+        {
+          "type": "hasServant",
+          "note": {
+            "zh_cn": "★★ 2026-10-01 补：必须有她自己的仆从，否则 recallServants 返回 0 = 什么都没发生。★ 这一条不是「锦上添花」：缺了它，本动作会在没有仆从时反复被选中（实测 20 次）、却永远做不出来 —— 按设计「失败不扣代价」⇒ 弹簧不动 ⇒ 下一周期再选中它 ⇒ **把同载体的 goety:cast_focus 饿死**（实测 cast_focus 一次都没被选中过）。仆从数已由 MaidSnapshot 投喂（GoetyServantOps#servantCount）。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "goety:set_servant_stance",
+      "kind": "family",
+      "carrier": "goety:command_horn",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "设定仆从姿态"
+      },
+      "params": {
+        "stance": {
+          "values": [
+            "WANDER",
+            "STAYING",
+            "FOLLOW",
+            "GUARD",
+            "NONE"
+          ],
+          "count": 5,
+          "note": {
+            "zh_cn": "闲逛 / 待命 / 跟随 / 警戒 / 无。见 info.goety.movement.*"
+          }
+        },
+        "scope": {
+          "values": [
+            "SINGLE",
+            "AREA"
+          ],
+          "note": {
+            "zh_cn": "命令呼号是 8 格范围广播"
+          }
+        }
+      },
+      "effects": [
+        {
+          "type": "SET_AI_STATE",
+          "note": {
+            "zh_cn": "★ 注意：这是「改变目标实体的行为模式」，不是造成伤害 —— effects 的取值域必须能表达它"
+          }
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IServant#setWandering/setStaying/setGuarding/setFollowing（R-A）；命令呼号的 8 格广播需复刻 CommandHorn（R-B）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/goety/lang/zh_cn.json:1362-1365,2596,3260-3264",
+          "note": "四种姿态文案 + 五种模式"
+        },
+        {
+          "level": "verified",
+          "cite": "item.goety.command_horn（zh_cn.json:2439）"
+        }
+      ],
+      "duration": {
+        "kind": "INSTANT",
+        "note": "★ 0 —— 四个 setter 全是纯字段/flag（IServant.java:141-165），updateMoveMode 整段无 tick 读写（:210-242）；命令呼号的 8 格广播也是立即施加（CommandHorn.java:139-207）。⚠️ 唯一像「计时」的 commandTick（IServant.java:262-268，200 tick）属于【命令移动】，不是姿态。"
+      },
+      "preconditions": [
+        {
+          "type": "hasServant",
+          "note": {
+            "zh_cn": "★ 2026-10-01 补：姿态是广播给【自己的仆从】的，没有仆从 ⇒ 广播 0 个 = 空操作。与 recall_servants 同一条理由（避免「永远做不出来」的动作占住决策）。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "goety:recall_to_saved_coords",
+      "kind": "atomic",
+      "carrier": "goety:focus_recall",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "回溯仆从到已存坐标"
+      },
+      "effects": [
+        {
+          "type": "TELEPORT"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "★ RecallFocus#recall(LivingEntity, ItemStack) —— 签名就是 LivingEntity，不是 Player（RecallFocus.java:93）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "common/.../RecallFocus.java:93"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 160,
+        "note": "★ 160 tick = 对空气右键的蓄力（RecallSpell.defaultCastDuration ⇒ SpellConfig.java:1746-1747 recallTime = 160）。★ 【0】= 直接右键点在自己的仆从身上（走 ITouchSpell 即时分支，DarkWand.java:302-309）。传送本身 0 tick（RecallFocus.java:105 teleportTo）。"
+      },
+      "preconditions": [
+        {
+          "type": "hasServant",
+          "note": {
+            "zh_cn": "★ 2026-10-01 补：要有可回溯的仆从。"
+          }
+        },
+        {
+          "type": "custom",
+          "fact": "goety:has_recall",
+          "note": {
+            "zh_cn": "★★ 手上的回溯聚晶里必须【真的存过坐标】（RecallFocus#hasRecall == true），否则 RecallFocus#recall 会静默返回 false（RecallFocus.java:94）。★ 这个事实由游戏侧投喂（PlayerLikeCombat#customFacts），键名与这里逐字一致 —— 清单声明了却没人喂 = 静默死路（见 docs/13 第 23 条）。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "goety:transfer_servant_ownership",
+      "kind": "atomic",
+      "carrier": "goety:wand_with_focus",
+      "sourceMod": "goety",
+      "displayName": {
+        "zh_cn": "转移仆从归属"
+      },
+      "effects": [
+        {
+          "type": "SET_AI_STATE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "IOwned#setTrueOwner(...)",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "api/entities/IOwned"
+        }
+      ],
+      "note": {
+        "zh_cn": "低优先级：对「类玩家战斗」不直接相关，但属操作清单的完整性问题（是否收录待定）。"
+      },
+      "duration": {
+        "kind": "INSTANT",
+        "note": "★ 0 —— 纯字段写入（IOwned#setTrueOwner）。"
+      }
+    }
+  ]
+}

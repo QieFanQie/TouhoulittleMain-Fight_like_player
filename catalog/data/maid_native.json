@@ -1,0 +1,538 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "docs/01-操作清单.md §5（TLM 1.5.3 源码实测）；vector 字段 = 设计判断值（非实测），见 docs/09 §6—— 这是「类玩家」之前的基线（baseline），用于衡量新增了多少",
+  "operations": [
+    {
+      "id": "maid_native:melee_swing",
+      "kind": "atomic",
+      "carrier": "maid:weapon",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "通用近战挥击",
+        "en_us": "Generic melee swing"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "任意主手物品，只要它有 ATTACK_DAMAGE 属性（isWeapon 的判定）"
+          }
+        },
+        {
+          "type": "hasTarget",
+          "note": {
+            "zh_cn": "★★ 2026-09-30 修：原判据是 custom「任务为 touhou_little_maid:attack 且当前有攻击目标」。两处都有问题：① 那是【玩家侧旧模型】的描述，而我们的任务是 fight_like_player:player_like_combat ⇒ 按字面理解【恰好排除了我们自己】；② 更严重的是 custom 在前置条件里是【fail-closed】的，而游戏侧喂的是空表 ⇒ 【拿剑的女仆在游戏里一个候选动作都没有】⇒ isArmed=false ⇒ 连目标都不找（S0 实测的「不注入就不动」）。⇒ 改为机器可判定的 hasTarget。"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "固定 20 tick 冷却，写死为 MaidMeleeAttack.create(20)"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "TLM 已有行为（EntityMaid#doHurtTarget）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskAttack.java:57",
+          "note": "MaidMeleeAttack.create(20) —— ★ 女仆近战的全部动作空间就是这一个"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskAttack.java:108-110",
+          "note": "isWeapon：stack.getAttributeModifiers(MAINHAND).containsKey(ATTACK_DAMAGE)"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ M4：本条的向量【吸收了横扫的群伤价值】—— 因为 doHurtTarget 一次就做近战+横扫，两者不可分开选择（见 maid_native:sweep 的说明）。⇒ AREA_DAMAGE 取 0.25（横扫的期望值，实际是否触发取决于刀上有没有横扫附魔与 SWORD_SWEEP 能力）。"
+      }
+    },
+    {
+      "id": "maid_native:sweep",
+      "kind": "atomic",
+      "carrier": "maid:weapon",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "横扫",
+        "en_us": "Sweep"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "主手物品能执行 SWORD_SWEEP 且有横扫伤害比 > 0（锋利/横扫之刃）"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "note": {
+            "zh_cn": "对 AABB 内多个 LivingEntity 造成 1.0 + 横扫比 × 基础伤害"
+          }
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/passive/EntityMaid.java:948-966",
+          "note": "doSweepHurt；:962 entity.hurt(this.damageSources().mobAttack(this), sweepDamage)"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/passive/EntityMaid.java:929",
+          "note": "doHurtTarget 里调用 doSweepHurt"
+        }
+      ],
+      "role": "passive",
+      "note": {
+        "zh_cn": "★★ M4 用源码纠正：横扫【不是独立动作】。EntityMaid#doHurtTarget（:914-946）一次调用就完成 近战(:926) + 横扫(:929) + 额外伤害(:941)，且横扫条件由 TLM 内部自判（canPerformAction(SWORD_SWEEP) 且有横扫附魔）。⇒ 女仆无法\"只横扫不近战\"。★ 这也与玩家侧一致：玩家的横扫是左键命中时的被动效果，不是独立操作。⇒ 标为 role=passive，其群伤价值并入 maid_native:melee_swing。"
+      }
+    },
+    {
+      "id": "maid_native:shield_block",
+      "kind": "atomic",
+      "carrier": "maid:shield",
+      "sourceMod": "touhou_little_maid",
+      "role": "stance",
+      "displayName": {
+        "zh_cn": "盾牌格挡（副手姿态）"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "副手盾牌"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "sustainTicks": 20,
+        "note": {
+          "zh_cn": "★★ 第十一轮改：本动作已改为 role=stance，**不再进候选集/不被打分** —— 举盾由【副手姿态伺服】维持（见 compat/behavior/OffhandStance）。委托方原话：「我们做的基本上都是主动技能，但是盾是被动迎击……『举盾』动作实际上是『确认副手上是否是盾并把盾放在副手上』」。★ 为什么不能当动作：动作的语义是「这一步做什么」（一次性、有承诺、做完扣代价），而「举着盾」没有「做完」的时刻；当成动作就会出现「举 20 tick → 收手 → 再举」的周期性破绽。★ 权威实现 TLM 的 MaidUseShieldTask 是「条件满足就一直举」（canStillUse 每 tick 重判），但它由 TLM 的 TaskAttack 注册进 brain，而女仆跑的是我们的任务 ⇒ 它永不运行 ⇒ 必须由我们接管。⇒ 现在：副手不是盾就从背包换上来 + 8 格内举着（12 格外才放，带迟滞）。"
+        }
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "格挡"
+          }
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidUseShieldTask（在 TaskAttack 的 brain 列表里）"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidUseShieldTask.java:13,27,31-32,37",
+          "note": "CHECK_RANGE=8；checkExtraStartConditions 要求目标距离 < 8；start() → startUsingItem(OFF_HAND)；canStillUse → 同一条件 ⇒ 无固定 tick 数"
+        }
+      ]
+    },
+    {
+      "id": "maid_native:extinguisher_extra",
+      "kind": "atomic",
+      "carrier": "maid:extinguisher",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "灭火器追加伤害"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "副手灭火器（InitItems.EXTINGUISHER）"
+          }
+        },
+        {
+          "type": "hasTarget",
+          "note": {
+            "zh_cn": "目标 fireImmune()"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "DURABILITY",
+          "amount": 1
+        }
+      ],
+      "effects": [
+        {
+          "type": "SUMMON",
+          "note": {
+            "zh_cn": "生成 EntityExtinguishingAgent；它每 5 tick 对 2 格内免疫火焰的怪物造成 2 点 magic 伤害，存活 3 秒"
+          }
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskAttack.java:85-100",
+          "note": "hasExtraAttack / doExtraAttack（IAttackTask 的扩展点）"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/item/EntityExtinguishingAgent.java:35,74",
+          "note": "★ 构造时没有传 owner ⇒ 它的伤害在 DamageSource 上与女仆毫无关联（战报项目的 C 级归因来源）"
+        }
+      ],
+      "role": "passive",
+      "note": {
+        "zh_cn": "★★ M4 用源码纠正：灭火器附伤【不是独立动作】。它由 EntityMaid#doHurtTarget(:941) 在近战成功后自动调用 IAttackTask#hasExtraAttack/doExtraAttack —— 与近战是同一次调用。⇒ 标为 role=passive（引擎自动附带）。★ 按 Q16 决策：不做任何特殊处理，它只是一条普通数据记录。持有灭火器时近战会自然附伤。"
+      }
+    },
+    {
+      "id": "maid_native:bow_shot",
+      "kind": "atomic",
+      "carrier": "maid:bow",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "弓射击"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "弓 + 箭；任务 bow_attack"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★★ 蓄力 20 tick 才放箭（有「快速射击」附魔时每级 −5，等级 > 4 则立即放）。⇒ 这是一个【两段动作】：起手 startUsingItem 是承诺的开始，放箭是承诺的结束。旧清单漏了 duration ⇒ 承诺=0 ⇒ 永不放箭（S0 实测「拉满不射」的根因之一）。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskBowAttack.java / MaidShootTargetTask"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidShootTargetTask.java:89-100",
+          "note": "★ ticksUsingItem >= (20 - level*5) ⇒ stopUsingItem() + performRangedAttack(target, BowItem.getPowerForTime(max(ticks,20)))；level = 主手 QUICK_CHARGE 附魔等级（:91）"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidShootTargetTask.java:102-107",
+          "note": "放箭后的间隔取属性 InitAttribute#MAID_SHOOT_COOLDOWN（旧版硬编码 2，已弃用）"
+        }
+      ]
+    },
+    {
+      "id": "maid_native:crossbow_shot",
+      "kind": "atomic",
+      "carrier": "maid:crossbow",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "弩射击"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "弩 + 箭；任务 cross_bow_attack"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 25,
+        "note": {
+          "zh_cn": "★ 装填时长 = CrossbowItem.getChargeDuration(弩)（默认 25，有快速装填附魔时更短）。⇒ 25 是【兜底值】，权威值由执行器在运行期读物品（ActionExecutors.chargeTicksFor 已实现该读取）。⚠️ TLM 在装填完成后还会等 20 + rand(20) tick 才放箭（MaidCrossbowAttack:50）；我们不照搬这段随机瞄准延迟，装填即放。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskCrossBowAttack.java / MaidCrossbowAttack"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidCrossbowAttack.java:36-56",
+          "note": "UNCHARGED → startUsingItem(持弩的手) + setChargingCrossbow(true) → CHARGING：useTicks >= CrossbowItem.getChargeDuration(crossbowStack) ⇒ releaseUsingItem() + setChargingCrossbow(false) ⇒ CHARGED（attackDelay = 20 + rand(20)，再除以 MAID_CROSSBOW_ATTACK_SPEED 属性）⇒ READY_TO_ATTACK：performRangedAttack(target, 1.0F) + CrossbowItem.setCharged(stack, false)"
+        }
+      ]
+    },
+    {
+      "id": "maid_native:trident",
+      "kind": "atomic",
+      "carrier": "maid:trident",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "三叉戟投掷/近战"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "三叉戟；任务 trident_attack"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 30,
+        "note": {
+          "zh_cn": "★★ 投掷前需举着 30 tick。⚠️【本条纠正了旧记录】：executors.json 曾写「力度传 0 且阈值取 TridentItem.THROW_THRESHOLD_TIME(=10)」，那是照搬原版；TLM 的实际阈值是【30】(MaidTridentTargetTask:90)，`THROW_THRESHOLD_TIME` 只被 import 却未用于该判断。★ 教训与 README 更正记录 #2 同型：以路由/常量的真实使用点为准，不看 import。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskTridentAttack.java / MaidTridentTargetTask"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidTridentTargetTask.java:81-99",
+          "note": "ticksUsingItem >= 30 && inSafeArea ⇒ stopUsingItem() + performRangedAttack(target, 0)；inSafeArea = !(有引雷附魔 && 雷雨 && 未入水 && closerThan(target,6))；间隔属性 = MAID_TRIDENT_COOLDOWN（旧硬编码 20）"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidTridentTargetTask.java:13,25",
+          "note": "★ 文件 import 了 TridentItem（:13）但阈值写死 30（:90）；attackCooldown = 20 已 @Deprecated"
+        }
+      ],
+      "cooldownTicks": 40,
+      "note": {
+        "zh_cn": "　★ 2026-10-03：加 40 tick 冷却（委托方：\"她特别喜欢用三叉戟\"）——它无弹药、无冷却、还带防御分，等于\"又强又安全\"；出手频率的诚实杠杆是冷却，而不是把向量削到不能用。"
+      }
+    },
+    {
+      "id": "maid_native:danmaku",
+      "kind": "atomic",
+      "carrier": "maid:danmaku",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "弹幕射击"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "TLM 弹幕物品；任务 danmaku_attack"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★ 弹幕【完全复用弓的射击任务】：TaskDanmakuAttack 的 brain 列表里挂的就是 MaidShootTargetTask()（:65）⇒ 蓄力同样是 20 tick。★ 这正是「五种远程攻击同构」的又一例证。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "note": {
+            "zh_cn": "InitDamage.danmakuDamage(thrower, danmaku) ⇒ DamageSource 直接带 thrower（战报项目的 A 级确证来源）"
+          }
+        },
+        {
+          "type": "APPLY_EFFECT",
+          "note": {
+            "zh_cn": "附带减速；★ 未传施加者 ⇒ 战报的 C 级来源"
+          }
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskDanmakuAttack.java"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/task/TaskDanmakuAttack.java:60-72",
+          "note": "★ shootTargetTask = new MaidShootTargetTask()（:65）⇒ 蓄力 20 tick；同任务还挂了 MaidRangedWalkToTarget + MaidAttackStrafingTask"
+        },
+        {
+          "level": "verified",
+          "cite": "entity/item/EntityDanmaku.java:102,106"
+        }
+      ]
+    },
+    {
+      "id": "maid_native:throw_any_item",
+      "kind": "atomic",
+      "carrier": "maid:throwable",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "投掷任意物品"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "可投掷物"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★ 蓄力 = 该行为的构造参数 chargeDurationTick，其【默认值 20】（RangedAttackTaskJS.Builder:199）。⚠️⚠️【本条的重要修正】：MaidShootTargetAnyItemTask 在全库中【只被 KubeJS 的任务构造器实例化】（RangedAttackTaskJS.java:64,86），TLM 原生任务里【没有】投掷任意物品的任务 ⇒ 本条的 carrier（maid:throwable）在 carriers.json 里本就是 unresolved ⇒ 运行期【不可达】。保留为知识记录，但不应计入能力。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "entity/ai/brain/task/MaidShootTargetAnyItemTask.java:86-105",
+          "note": "tickItemCanUse：ticksUsingItem >= chargeDurationTick ⇒ stopUsingItem() + performRangedAttack(target, BowItem.getPowerForTime(max(ticks,20)))；另有 tickItemCanNotUse（useDuration <= 0 的物品走挥手路径）"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/kubejs/register/task/RangedAttackTaskJS.java:64,199",
+          "note": "★ 唯一实例化点；Builder 字段 chargeDurationTick 默认 = 20"
+        }
+      ]
+    },
+    {
+      "id": "maid_native:gun_shot",
+      "kind": "atomic",
+      "carrier": "superbwarfare:gun",
+      "cooldownTicks": 20,
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "枪械射击"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "★★ 第十七轮：本条改由 superbwarfare:gun 承载 ⇒ 只有**卓越前线**的 GunItem 会选到它（TaCZ 那把枪走 tacz:shoot 那条，两条动作不再重叠）。判据仍是 TLM 自己的 GunCommonUtil.isGun；执行器会先把枪换到手上。"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": {
+          "zh_cn": "★ 20 只是【兜底】。权威值是 GunCommonUtil.performGunAttack 的【返回值】（每把枪的射速不同），GunShootTargetTask:68-73 拿它当 cooldown、再除以 MAID_GUN_ATTACK_SPEED 属性。⇒ 执行器执行后按返回值决定何时算「这一发打完」（这是我们接「执行器回报完成」的示范用例）。设计上「一梭子」应作为 BURST 型承诺，见 docs/09 §2.4 的 fireMode 参数化（依赖 W23）。"
+        }
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "TLM 已有行为（compat/gun/common/ai/GunShootTargetTask ⇒ IGunOperator.shoot）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "compat/gun/common/GunCommonUtil.java:19-21",
+          "note": "TacCompat.init() || SWarfareCompat.init() ⇒ 才 add(new TaskGunAttack())"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/tacz/TacInnerCompat.java",
+          "note": "isGun(stack) = stack.getItem() instanceof com.tacz.guns.api.item.IGun"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/gun/common/ai/GunShootTargetTask.java:64-73",
+          "note": "if (--attackCooldown <= 0 && seeTime >= -60 && canSee) ⇒ attackCooldown = GunCommonUtil.performGunAttack(owner, target, mainHandItem)；再除以 InitAttribute#MAID_GUN_ATTACK_SPEED"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 这是基线里唯一「一条动作代表整个载体的丰富性」的退化最严重处：玩家的枪有开火/ADS/换弹/拉栓/切射击模式/配件/枪托近战/手雷等，女仆只有「射击」。详见 _research/guns-gap-analysis.md。★★ 2026-09-30 修：原本还有一条 custom「需 ModList 里加载了 tacz 或 superbwarfare，否则该任务根本不注册」—— 那是【冗余】的（载体判据 instanceof IGun 本身已经蕴含该模组已加载），而 custom 在前置条件里是 fail-closed ⇒ 等于把「枪械射击」在游戏里彻底关掉。⇒ 删除。"
+      }
+    },
+    {
+      "id": "maid_native:slashblade_generic_slash",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "touhou_little_maid",
+      "displayName": {
+        "zh_cn": "拔刀剑通用斩击（退化版）"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "主手是 ItemSlashBlade"
+          }
+        },
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "任务必须是 touhou_little_maid:attack"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE",
+          "note": {
+            "zh_cn": "AttackManager.doSlash(maid, roll, Vec3.ZERO, false, false, 1.0, KnockBacks.smash)，roll = random.nextInt(60) - 30 —— ★ 随机角度"
+          }
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "compat/slashblade/SlashBladeCompat.java:24-30",
+          "note": "★ 这就是 TLM 对拔刀剑的全部支持：一次随机角度的斩击"
+        },
+        {
+          "level": "verified",
+          "cite": "compat/slashblade/SlashBladeCompat.java:20-22",
+          "note": "isSlashBladeItem = stack.getItem() instanceof ItemSlashBlade"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 基线意义的顶点：玩家用一把刀有 30+ 种操作，女仆只有这一条，而且角度是随机的 —— 「是哪一招」这个信息在 TLM 里根本不存在。这正是本项目存在的理由。"
+      },
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 20,
+        "note": "★ 20 tick = 近战槽位的节拍（TaskAttack.java:57 MaidMeleeAttack.create(20)）；而 doSlash 本身【同帧结算】（SlashBladeCompat.java:27 AttackManager.doSlash(maid, roll, Vec3.ZERO, false, false, 1.0, KnockBacks.smash) 没有任何 tick 参数）⇒ 20 是「下一次能再挥」的间隔，不是挥击时长。"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1391 @@
+{
+  "formatVersion": 1,
+  "generatedFrom": "docs/01-操作清单.md §3（证据：拔刀剑重锋 1.8.60 的 adv.slashblade.* lang + _research/decompiled/ + _research/javap/）",
+  "operations": [
+    {
+      "id": "slashblade:combo_a",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "连击 A",
+        "en_us": "Combo A"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        }
+      ],
+      "cost": [
+        {
+          "type": "NONE"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 7,
+        "note": "★ 7 tick（输入锁 3）。出处 ComboStateRegistry.java:65 COMBO_A1 = startAndEnd(1,10) → (10−1)×33.333ms = 300ms ⇒ 7。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "interruptible": {
+        "value": true
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "AttackManager.doSlash(LivingEntity, float, Vec3, boolean, boolean, double, KnockBacks) -> EntitySlashEffect",
+      "existingImpl": "万法皆通 SlashBladeDirectSkills.BASIC_SLASH / HORIZONTAL_SLASH 等",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:121-122",
+          "note": "成就文本：键位 攻击(♠)；指令 地面 ♠-♠-♠-♠"
+        },
+        {
+          "level": "verified",
+          "cite": "registry/combo/ComboCommands.java:36-43",
+          "note": "路由表：{ON_GROUND, L_CLICK} -> combo_a1；{ON_GROUND, R_CLICK} -> combo_a1 ⇒ 左键右键均可"
+        },
+        {
+          "level": "verified",
+          "cite": "util/AttackManager（全静态、全 LivingEntity/Entity）"
+        }
+      ],
+      "note": {
+        "zh_cn": "成就文本用 ♠=攻击 占位，容易被误读为「全是左键」。实测连击是左键或右键；三招派生（迅冲斩/上斩/空坠斩）是右键。"
+      }
+    },
+    {
+      "id": "slashblade:combo_b",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "连击 B",
+        "en_us": "Combo B"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 14,
+        "note": "★ 14 tick（锁 8）；b2~b6 单段各 7。出处 ComboStateRegistry.java:84 COMBO_B1 = startAndEnd(700,720)（20 帧 = 666ms）；:91-95 各段 startAndEnd(710,720) = 333ms。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "AttackManager.doSlash(...)",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:123-124",
+          "note": "指令：地面 ♠-♠-♠，停顿后重复 ♠"
+        }
+      ],
+      "note": {
+        "zh_cn": "「停顿后重复」= 依赖 ComboState 的 TimeoutNext；精确 tick 窗口由 SlashBladeComboMeta 提供 (firstAttackTick, lastAttackTick, cancelAfterTicks)"
+      }
+    },
+    {
+      "id": "slashblade:combo_b_finish",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "完成连击 B",
+        "en_us": "Combo B Finisher"
+      },
+      "comboDeps": [
+        {
+          "action": "slashblade:combo_b",
+          "note": {
+            "zh_cn": "在连击 B 的收招窗口内"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:125-126",
+          "note": "成就名「完成连击 B」，描述「撕碎！」"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 40,
+        "note": "★ 40 tick（锁 10），伤害在 tick 2/3。出处 ComboStateRegistry.java:71 COMBO_C = startAndEnd(400,459)（59 帧 = 1966ms）+ addTickAction put(2,...)/put(3,...)。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      }
+    },
+    {
+      "id": "slashblade:combo_c",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "连击 C",
+        "en_us": "Combo C"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 40,
+        "note": "★ 40 tick（锁 10），伤害在 tick 2/3。出处 ComboStateRegistry.java:71 COMBO_C = startAndEnd(400,459)（59 帧 = 1966ms）+ addTickAction put(2,...)/put(3,...)。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:127-128",
+          "note": "指令：地面 ♠-♠，停顿后 ♠"
+        }
+      ]
+    },
+    {
+      "id": "slashblade:combo_a_ex",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "连击 A·绝",
+        "en_us": "Combo A EX"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        },
+        {
+          "type": "BUFF",
+          "note": {
+            "zh_cn": "需「力量」或「饥饿」效果"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 76,
+        "note": "★ 76 tick = combo_a5ex 单段（锁 22）；若从 combo_a4_ex 入口段算则是 27 tick（锁 14）。出处 ComboStateRegistry.java:82 COMBO_A5 = startAndEnd(900,1013)（113 帧 = 3766ms）；:79 COMBO_A4_EX = startAndEnd(800,839)（1300ms）；分流见 :73（isPowered）。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:129-130",
+          "note": "指令：地面，在力量或饥饿效果时 ♠×5"
+        }
+      ],
+      "note": {
+        "zh_cn": "★ 一条「玩家感受不到、但代码硬性要求」的隐性门槛：不满足则退化为普通连击。"
+      }
+    },
+    {
+      "id": "slashblade:rapid_slash",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "迅冲斩",
+        "en_us": "Rapid Slash"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "registry/combo/ComboCommands.java:36-43",
+          "note": "★ {ON_GROUND, SNEAK, FORWARD, R_CLICK} -> rapid_slash ⇒ 是右键，不是左键"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:146-147"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 13,
+        "note": "★ 13 tick，且【无力量/饥饿时全程硬锁】（next 指自己 ⇒ 点击被吞，ISlashBladeState.java:299）。出处 ComboStateRegistry.java:189 RAPID_SLASH = startAndEnd(2000,2019)（19 帧 = 633ms）；rapid_slash_quick 段 = 1。另：_research/slashblade-operations.md 里「猛冲斩」的描述未提这条硬锁。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "note": {
+        "zh_cn": "★★ 2026-10-01：本条【删掉了 stateReq SNEAKING】。理由：那是**玩家侧输入语法**的描述（玩家要蹲下+方向+右键才会路由到这一招），而女仆侧是**显式决策**，我们的执行器**直调 AttackManager.doSlash**、根本不经过 Coommands 的输入路由 ⇒ 不需要她潜行（她也潜行不了：没有客户端输入）。★ 与 slashblade:guard 的区别：guard 的**机制本体**就要求 IInputState 里有 SNEAK（事件处理器读它），所以那条必须保留、且归入「不做」。"
+      }
+    },
+    {
+      "id": "slashblade:upperslash",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "上斩",
+        "en_us": "Upperslash"
+      },
+      "stateReq": [
+        {
+          "type": "GROUND"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "registry/combo/ComboCommands.java:36-43",
+          "note": "★ {ON_GROUND, BACK, SNEAK, R_CLICK} -> upperslash ⇒ 右键"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:151-152"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 40,
+        "note": "★ 40 tick（锁 7）；第 6 tick 派生 upperslash_jump。出处 ComboStateRegistry.java:116 UPPERSLASH = startAndEnd(1600,1659)（59 帧 = 1966ms）；派生 :118-119 fireTime = getTicksFromFrames(9.0)。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "note": {
+        "zh_cn": "★★ 2026-10-01：本条【删掉了 stateReq SNEAKING】。理由：那是**玩家侧输入语法**的描述（玩家要蹲下+方向+右键才会路由到这一招），而女仆侧是**显式决策**，我们的执行器**直调 AttackManager.doSlash**、根本不经过 Coommands 的输入路由 ⇒ 不需要她潜行（她也潜行不了：没有客户端输入）。★ 与 slashblade:guard 的区别：guard 的**机制本体**就要求 IInputState 里有 SNEAK（事件处理器读它），所以那条必须保留、且归入「不做」。"
+      }
+    },
+    {
+      "id": "slashblade:rising_star",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "星旋天翔",
+        "en_us": "Rising Star"
+      },
+      "comboDeps": [
+        {
+          "action": "slashblade:rapid_slash",
+          "note": {
+            "zh_cn": "迅冲斩后按住攻击，直到命中敌人"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RB",
+      "reachNote": {
+        "zh_cn": "需自行编排「前置动作 → 按住 → 命中判定」的时序；无公开单点入口"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:148-149"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 25,
+        "note": "★ 25 tick（锁 12）。出处 ComboStateRegistry.java:243 RISING_STAR = startAndEnd(2100,2137)（37 帧 = 1233ms）。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      }
+    },
+    {
+      "id": "slashblade:upperslash_jump",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "跃升斩",
+        "en_us": "Upperslash Jump"
+      },
+      "comboDeps": [
+        {
+          "action": "slashblade:upperslash",
+          "note": {
+            "zh_cn": "上斩后按住攻击"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:153-154"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 9,
+        "note": "★ 9 tick（锁 4）。出处 ComboStateRegistry.java:132 UPPERSLASH_JUMP = startAndEnd(1700,1713)（13 帧 = 433ms）。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      }
+    },
+    {
+      "id": "slashblade:judgement_cut",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "次元斩",
+        "en_us": "Judgement Cut"
+      },
+      "cost": [
+        {
+          "type": "CHARGE_TIME",
+          "amount": 9,
+          "note": {
+            "zh_cn": "getFullChargeTicks() 硬编码 9"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 16,
+        "note": "★ 16 tick，且【硬锁】（next 指自己 ⇒ 期间点击无效）；到 none 的【全链】= 47 tick。出处 ComboStateRegistry.java:262 JUDGEMENT_CUT = startAndEnd(1900,1923)（23 帧 = 766ms）+ next(自己)；全链 + :312 speed(0.4f) 416ms + :313 sheath 1166ms。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "ISlashBladeState#doChargeAction(LivingEntity, int elapsed)（★ 参数是 LivingEntity，女仆可直接调）",
+      "existingImpl": "万法皆通 SlashBladeDirectSkills.JUDGEMENT_CUT",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:139-140",
+          "note": "指令：♠ 按住，蓄力完毕放开"
+        },
+        {
+          "level": "verified",
+          "cite": "ItemSlashBlade#releaseUsing -> doChargeAction(entityLiving, elapsed)",
+          "note": "★ SA/蓄力类在「松手那一帧」结算，不是 onUseTick"
+        }
+      ]
+    },
+    {
+      "id": "slashblade:judgement_cut_just",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "次元斩·绝",
+        "en_us": "Judgement Cut (Just)"
+      },
+      "stateReq": [
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "elapsed 落在 [9, 9+justSpan) 内松手；justSpan = min(5, 3+灵魂疾行等级)"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "reachNote": {
+        "zh_cn": "需要「精确到 tick 的松手时机」——女仆侧要自己算窗口，无法靠单次 API 调用得到"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "slasharts/SlashArts.getJustReceptionSpan / getFullChargeTicks"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 4,
+        "note": "★ 4 tick（硬锁），伤害在 tick 1。出处 ComboStateRegistry.java:316 JUDGEMENT_CUT_SLASH_JUST = startAndEnd(1923,1928)（5 帧 = 166ms）+ addTickAction put(1, JudgementCut::doJudgementCutJust)。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      }
+    },
+    {
+      "id": "slashblade:quick_charge",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "迅速蓄力",
+        "en_us": "Quick Charge"
+      },
+      "stateReq": [
+        {
+          "type": "SHEATHED",
+          "note": {
+            "zh_cn": "在纳刀的瞬间按下"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:143-144"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 3,
+        "note": "★ 3 tick = 0 级灵魂疾行时的窗口（elapsed <= 3 + level ⇒ Jackpot）。出处 ComboState.java:147-150 releaseActionQuickCharge；下限 ISlashBladeState.java:321-323（elapsed <= 2 ⇒ 无效）。⚠️ 这里的 elapsed 是【当前 ComboState 的 elapsed】，不是按住右键的 tick 数。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      }
+    },
+    {
+      "id": "slashblade:aerial_rave_a",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "御空刀舞 A",
+        "en_us": "Aerial Rave A"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 15,
+        "note": "★ 15 tick = a1 段（锁 3）；a2 = 7、a3 = 19。出处 ComboStateRegistry.java:101 AERIAL_RAVE_A1 = startAndEnd(1100,1122)（22 帧 = 733ms）；:103 a2（10 帧）；:106 a3（28 帧）。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "registry/combo/ComboCommands.java:36-43",
+          "note": "{ON_AIR} -> aerial_rave_a1（左键或右键）"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:132-133"
+        }
+      ]
+    },
+    {
+      "id": "slashblade:aerial_rave_b",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "御空刀舞 B",
+        "en_us": "Aerial Rave B"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 25,
+        "note": "★ 25 tick = b3 段（锁 6）；b4 亦 25。出处 ComboStateRegistry.java:108 AERIAL_RAVE_B3 = startAndEnd(1400,1437)（37 帧 = 1233ms）；:113 b4 同。**换算按 37 帧**。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:134-135",
+          "note": "指令：滞空 ♠-♠，停顿后 ♠-♠"
+        }
+      ]
+    },
+    {
+      "id": "slashblade:aerial_cleave",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "空坠斩",
+        "en_us": "Aerial Cleave"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RA",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "registry/combo/ComboCommands.java:36-43",
+          "note": "★ {ON_AIR, SNEAK, BACK, R_CLICK} -> aerial_cleave ⇒ 右键"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:136-137"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 9,
+        "sustainTicks": 24,
+        "note": "★ 入招段 9 tick（ComboStateRegistry.java:139 AERIAL_CLEAVE = startAndEnd(1800,1812)，12 帧 = 400ms），随后进 loop：:171 AERIAL_CLEAVE_LOOP = startAndEnd(1812,1817) + loop().timeout(1000) ⇒ 5 帧(166ms) + 1000ms = 1166ms ⇒ 24。⚠️ 落地即提前结束（:179 onGround ⇒ aerial_cleave_landing）⇒ 真值通常更短。★ 另注：Builder#timeout 的单位是【毫秒】不是 tick。"
+      },
+      "note": {
+        "zh_cn": "★★ 2026-10-01：本条【删掉了 stateReq SNEAKING】。理由：那是**玩家侧输入语法**的描述（玩家要蹲下+方向+右键才会路由到这一招），而女仆侧是**显式决策**，我们的执行器**直调 AttackManager.doSlash**、根本不经过 Coommands 的输入路由 ⇒ 不需要她潜行（她也潜行不了：没有客户端输入）。★ 与 slashblade:guard 的区别：guard 的**机制本体**就要求 IInputState 里有 SNEAK（事件处理器读它），所以那条必须保留、且归入「不做」。"
+      }
+    },
+    {
+      "id": "slashblade:air_trick",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "隔空瞬步",
+        "en_us": "Air Trick"
+      },
+      "stateReq": [
+        {
+          "type": "TARGET_IN_VIEW"
+        },
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "effects": [
+        {
+          "type": "TELEPORT",
+          "note": {
+            "zh_cn": "瞬移到注视中的敌人头顶"
+          }
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "入口 SlayerStyleArts#handleForwardSprintSneak(ServerPlayer, Level)；★ 但 doTeleport(Entity, LivingEntity) / calculateTeleportPosition(Entity, LivingEntity) / performTeleportation(Entity, ServerLevel, Vec3) 都是 public static 且收 Entity ⇒ 可复现"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/SlayerStyleArts.java:138",
+          "note": "handleForwardSprintSneak(ServerPlayer, Level)"
+        },
+        {
+          "level": "verified",
+          "cite": "ability/SlayerStyleArts.java:272-327",
+          "note": "Entity 版静态方法可复用"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick = 无敌帧（SlayerStyleArts.java:90 TRICK_ACTION_UNTOUCHABLE_TIME = 10；:191 setUntouchable(...,10)）。⚠️ 瞬移本身没有固定时长：它在【幻影剑命中帧】结算（:223-233 立即分支需要 target == lastHurtMob 且 tickCount < lastHurtByMobTimestamp + 100）。⇒ 10 是可达证据里唯一确定的值。"
+      }
+    },
+    {
+      "id": "slashblade:trick_down",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "瞬步退行",
+        "en_us": "Trick Down"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        },
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "handleBackSprintSneak(ServerPlayer)；传送数学可复用"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/SlayerStyleArts.java:153"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick（无敌帧）。出处 SlayerStyleArts.java:153-162 handleBackSprintSneak ⇒ applyFullTrickEffects ⇒ :191 setUntouchable(...,10)；位移 BACK_MOTION = (0,-5,0)（:77）。"
+      }
+    },
+    {
+      "id": "slashblade:trick_dodge",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "瞬步回避",
+        "en_us": "Trick Dodge"
+      },
+      "stateReq": [
+        {
+          "type": "MOVING"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DISPLACE",
+          "note": {
+            "zh_cn": "向任意方向瞬移躲避伤害"
+          }
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "handleSprintMove(ServerPlayer, EnumSet) 且内含 sender.connection.send(...)"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/SlayerStyleArts.java:164"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick（无敌帧）；另有【20 tick 内最多 3 次】的可用性限制（IMobEffectState.java:125-145 doAvoid ⇒ setAvoidCooldown(now + 20)）。⚠️ 本条修正了 _research/slashblade-operations.md:184 的说法：它【不】要求「刚被攻击」。"
+      }
+    },
+    {
+      "id": "slashblade:trick_up",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "瞬步上行",
+        "en_us": "Trick Up"
+      },
+      "stateReq": [
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "executeTrickUp(ServerPlayer)；传送数学可复用"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/SlayerStyleArts.java:214"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick（无敌帧）。出处 SlayerStyleArts.java:214-221 executeTrickUp ⇒ :207 ⇒ :191 setUntouchable(...,10)。"
+      }
+    },
+    {
+      "id": "slashblade:enemy_step",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "借力跳",
+        "en_us": "Enemy Step"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        },
+        {
+          "type": "NEAR_ENEMY"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "onInputChange(InputCommandEvent) 里 ServerPlayer sender = event.getEntity()；★ 逻辑仅约 10 行（检查滞空+新按下跳跃+附近有生物 ⇒ setUntouchable(10) + move(SELF, (0,0.5,0))），重写成本低。唯一真依赖是连接发包"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/EnemyStep.java:69-97"
+        },
+        {
+          "level": "verified",
+          "cite": "event/handler/InputCommandEvent.java:3,8",
+          "note": "★ 载荷类型写死 ServerPlayer ⇒ 女仆永远收不到"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick（无敌帧）。出处 EnemyStep.java:87 setUntouchable(sender,10)；:88-93 位移 (0,0.5,0) + 清 ComboState。"
+      }
+    },
+    {
+      "id": "slashblade:kick_jump",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "踢跃",
+        "en_us": "Kick Jump"
+      },
+      "stateReq": [
+        {
+          "type": "AERIAL"
+        },
+        {
+          "type": "NEAR_WALL"
+        }
+      ],
+      "effects": [
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "同 EnemyStep；并额外挂在 TickEvent.PlayerTickEvent"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/KickJump.java:76-79,117-119"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick（无敌帧）；另有 2 tick 的 NBT 冷却（KickJump.java:98-99）。出处 KickJump.java:98-99 / :119-125。"
+      }
+    },
+    {
+      "id": "slashblade:guard",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "防御",
+        "en_us": "Guard"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "主手必须有拔刀剑 capability（BLADESTATE）且未损坏"
+          }
+        },
+        {
+          "type": "hasEnchantment",
+          "enchantment": "minecraft:thorns",
+          "note": {
+            "zh_cn": "★★ 必须有「荆棘」（THORNS）≥ 1 级 —— 否则整个能力直接失效（Guard.java:85 在方法最前面就 return，投掷物与近战都一样）。这是隐藏门槛。★ 2026-09-30 修：本条原来【只写了 note、没写 enchantment 字段】⇒ CarrierResolver 的前置键会退化成「enchant:整句中文」，与 MaidSnapshot 投喂的 enchant:minecraft:thorns 永不匹配 ⇒ 即使刀上有荆棘也拿不到。"
+          }
+        }
+      ],
+      "stateReq": [
+        {
+          "type": "GROUND"
+        },
+        {
+          "type": "NOT_MOVING",
+          "note": {
+            "zh_cn": "输入状态里不能同时含 FORWARD/BACK/LEFT/RIGHT"
+          }
+        },
+        {
+          "type": "SNEAKING",
+          "note": {
+            "zh_cn": "★ 机制本体要求：Guard 是 LivingAttackEvent 处理器，它读 IInputState 里的 SNEAK。⇒ 女仆侧**不可达**（没有客户端输入），本条归入「不做」（docs/04 Q19）。"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "DURABILITY",
+          "amount": 1,
+          "note": {
+            "zh_cn": "仅在「非完美格挡 且 非高评价」时扣"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "sustainTicks": 20,
+        "note": "★★ 20 tick 是【我们的重评估周期】，不是他们的常量 —— 源码里【没有】「持续 N tick」这种量（Guard 是 @SubscribeEvent 的条件判定：按住 SNEAK + 不按移动键 + 在地面期间持续有效；唯一 tick 常量是 Guard.java:113 justAcceptancePeriod = 5 + 灵魂疾行等级）。⇒ 与 maid_native:shield_block 同处理。"
+      },
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "取消 LivingAttackEvent；使远程攻击无效"
+          }
+        }
+      ],
+      "reach": "RB",
+      "reachEntry": "★ 唯一路径：往女仆的 IInputState 写入 InputCommand.SNEAK，然后让原版 LivingAttackEvent 触发 Guard#onLivingAttack。Guard 不是可调用 API，而是事件处理器。",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/Guard.java:72-109",
+          "note": "LivingEntity victim = event.getEntity()；全程只碰 LivingEntity"
+        },
+        {
+          "level": "verified",
+          "cite": "ability/Guard.java:85",
+          "note": "getEnchantmentLevel(Enchantments.f_44972_) <= 0 ⇒ return"
+        },
+        {
+          "level": "verified",
+          "cite": "_scratch/mc/client.txt:78035 + joined.tsrg",
+          "note": "★ THORNS -> h -> f_44972_（不是 SOUL_SPEED；SOUL_SPEED 是 l -> f_44976_）"
+        },
+        {
+          "level": "verified",
+          "cite": "capability/CapabilityAttachHandler.java:30-37",
+          "note": "slashblade:inputstate 挂到每个 LivingEntity，无 instanceof Player 检查"
+        },
+        {
+          "level": "verified",
+          "cite": "ability/Guard.java:161",
+          "note": "唯一与 Player 相关的只有播声音（纯表现）"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 2026-09-30 决策（docs/04 Q19）：**本条【不做】**。理由：`IInputState` 的命令集只由客户端输入产生（`MoveInputHandler` 是 `@Mod.EventBusSubscriber(Dist.CLIENT)` + `TickEvent.ClientTickEvent`，从 `LocalPlayer.f_108618_` 读键，再经 `MoveCommandMessage` 发到服务端），而 TLM 从不写女仆的输入状态（整个 `compat/slashblade` 只有一处 `AttackManager.doSlash`）⇒ 要让女仆格挡，我们必须自己造「输入模拟」（写 SNEAK + 维护 `lastPressTime`）。投入产出比低 ⇒ 不做。\n\n★ 顺便纠正一处理解偏差：**「挡投射物」有两条不同的路**——\n  ① **`Guard`**（本条）：潜行 + 静止 + 刀未损坏 + **荆棘≥1**（`Guard.java:100` 的门槛，1.9.65 与 1.8.60 逐字一致；映射已闭合验证：`client.txt:78035` THORNS→h，`joined.tsrg:72501` h→f_44972_）⇒ **取消伤害**；\n  ② **`ArrowReflector`**（`ComboState.java:173` 是每个招式的【默认 tickAction】）：主手刀 + **正在使用物品**（`getTicksUsingItem() > 0`）+ 附近有投射物 ⇒ **把投射物弹回去**，**与附魔无关**。\n⇒ 委托方实测「无荆棘也能挡投射物」是 ② 的现象，**与 ① 的荆棘门槛并不矛盾**。②（弹反）对女仆**更可达**（只要我们能驱动招式 + `startUsingItem`），但**尚未收录为条目**（待拍板，见 docs/10 的 D7）。\n\n★ 附：它曾是「复用原版状态机」这条路的验证点（P1 冒烟测试第 3 项）—— 该验证点现已作废（改由玩家侧的判别实验回答「荆棘是不是门槛」）。"
+      }
+    },
+    {
+      "id": "slashblade:guard_just",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "格挡",
+        "en_us": "Guard Just"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem"
+        },
+        {
+          "type": "hasEnchantment",
+          "enchantment": "minecraft:thorns",
+          "note": {
+            "zh_cn": "荆棘（THORNS）≥ 1。★ 与 guard 同一条门槛（同一个事件处理器）。"
+          }
+        }
+      ],
+      "stateReq": [
+        {
+          "type": "GROUND"
+        },
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "在受到攻击时按下潜行；窗口 = 5 + 灵魂疾行等级 tick"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "OBSERVABLE_ONLY",
+          "note": {
+            "zh_cn": "使任何攻击无效；高评价状态不耗耐久且评价上升"
+          }
+        },
+        {
+          "type": "APPLY_EFFECT",
+          "note": {
+            "zh_cn": "Untouchable.setUntouchable(victim, 10)"
+          }
+        }
+      ],
+      "reach": "RB",
+      "reachEntry": "同 slashblade:guard；另外必须自己维护 IInputState 里 SNEAK 的 lastPressTime（Guard 用它算 isJust）",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/Guard.java:110-118",
+          "note": "justAcceptancePeriod = 5 + soulSpeedLevel（f_44976_ = SOUL_SPEED）；timeCurrent - timeStartPress < 该窗口 ⇒ isJust"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:190-191",
+          "note": "「灵魂疾行每 1 级能够延长格挡指令输入窗口 1 tick」（与代码一致）"
+        }
+      ],
+      "duration": {
+        "kind": "COMMIT",
+        "ticks": 10,
+        "note": "★ 10 tick = 成功格挡后的无敌（Guard.java:155-157 setUntouchable(victim,10)）；判定窗口 = 5 + 灵魂疾行等级（:113）。⚠️ 前置条件必须含「荆棘」附魔（f_44972_），否则整个能力直接失效。"
+      }
+    },
+    {
+      "id": "slashblade:summoned_sword",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "幻影剑",
+        "en_us": "Summoned Sword"
+      },
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 2
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "existingImpl": "万法皆通在 SlashBladeDirectSkillHandler 里直接操作 EntityAbstractSummonedSword",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:176-177",
+          "note": "消耗2点耀魂值，射出幻影剑"
+        },
+        {
+          "level": "verified",
+          "cite": "_scratch/sbds/SlashBladeDirectSkillHandler.class",
+          "note": "常量池引用 mods/flammpfeil/slashblade/entity/EntityAbstractSummonedSword"
+        }
+      ],
+      "duration": {
+        "kind": "INSTANT",
+        "note": "★ 0 —— 按下那一帧就出剑：SummonedSwordArts.java:108-117（onDown）之后 :118-145 同帧 new EntityAbstractSummonedSword + addFreshEntity。那 4 个 pressTime+10L 的调度是给【四种剑阵】的，不是单发幻影剑。"
+      },
+      "preconditions": [
+        {
+          "type": "spellConditionsMet",
+          "fact": "slashblade:can_summon_sword",
+          "note": {
+            "zh_cn": "★★ 2026-10-03 补（解析期）：幻影剑的三条前置——**妖刀（BEWITCHED）+ 力量附魔 > 0 + 耀魂值 ≥ SUMMON_SWORD_COST**——必须同时满足（官方 SummonedSwordArts 同判据）。此前只在执行期判 ⇒ 委托方实测「我让女仆只用幻影剑，但完全没效果」：它一直被选中、一直失败。现在做不到就**不进候选**。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slashblade:spiral_swords",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "环形幻剑阵"
+      },
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 20
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:178-179"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 10,
+        "sustainTicks": 200,
+        "note": "★ 前摇 10 + 持续 200。出处 SummonedSwordArts.java:113 schedule(pressTime + 10L)；EntitySpiralSwords.java:99-101（if 200 < tickCount ⇒ burst()）。"
+      }
+    },
+    {
+      "id": "slashblade:storm_swords",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "怒风幻剑阵"
+      },
+      "stateReq": [
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 20
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        },
+        {
+          "type": "DISPLACE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:180-181"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 10,
+        "sustainTicks": 20,
+        "note": "★ 前摇 10 + 持续 20。出处 SummonedSwordArts.java:114 schedule(pressTime + 10L)；EntityStormSwords.java:91-93（if 20 <= tickCount ⇒ doFire()）。"
+      }
+    },
+    {
+      "id": "slashblade:blistering_swords",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "急袭幻剑阵"
+      },
+      "stateReq": [
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 20
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:182-183"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 10,
+        "sustainTicks": 20,
+        "note": "★ 前摇 10（SummonedSwordArts.java:115）；持续 = 【按住多久】（松键那一帧才开火，EntityBlisteringSwords.java:143-149）⇒ 源码里没有固定值，20 是我们的重评估周期。"
+      }
+    },
+    {
+      "id": "slashblade:heavy_rain_swords",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "暴雨幻剑阵"
+      },
+      "stateReq": [
+        {
+          "type": "SNEAKING"
+        }
+      ],
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 20
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RB",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json:184-185",
+          "note": "指令：潜行 + 后退→前进 + 按住"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 10,
+        "sustainTicks": 30,
+        "note": "★ 前摇 10（SummonedSwordArts.java:116）；悬空 10 + delay 后落下（EntityHeavyRainSwords.java:104-106 basedelay = 10）、落地后 20（:51 ON_GROUND_LIFE_TIME = 20）。delay 是每把刀的附魔/数据 ⇒ 30 是 10+20 的名义值。"
+      }
+    },
+    {
+      "id": "slashblade:slash_art",
+      "kind": "family",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "displayName": {
+        "zh_cn": "刀技（SA）",
+        "en_us": "Slash Art"
+      },
+      "summary": {
+        "zh_cn": "右键按住蓄力，松手那一帧结算。9 种刀技 × 释放时机质量 ⇒ 压成 1 族 + 2 个参数轴。"
+      },
+      "params": {
+        "arts": {
+          "ref": "mods.flammpfeil.slashblade.registry.SlashArtsRegistry 的 9 个注册项",
+          "values": [
+            "none",
+            "judgement_cut",
+            "sakura_end",
+            "void_slash",
+            "circle_slash",
+            "drive_vertical",
+            "drive_horizontal",
+            "wave_edge",
+            "piercing"
+          ],
+          "count": 9,
+          "note": {
+            "zh_cn": "由刀的 capability（ISlashBladeState#getSlashArts）决定，女仆不可选；重铸才能换。★★ 关键：它绑在【物品数据】上（named_blades/*.json 的 properties.slashArtsType），且【运行时可通过露台/合成复制替换】（item tag can_copy_sa / can_change_sa）⇒ 【绝不能在清单里按刀写死】，必须运行时解析参数。见 docs/09 §4.5.1"
+          }
+        },
+        "timing": {
+          "values": [
+            "Success",
+            "Jackpot"
+          ],
+          "note": {
+            "zh_cn": "elapsed < 9 ⇒ Fail（无 SA）；[9, 9+justSpan) ⇒ Jackpot；>= 9+justSpan ⇒ Success"
+          }
+        }
+      },
+      "stateReq": [
+        {
+          "type": "TIMING_WINDOW",
+          "note": {
+            "zh_cn": "justSpan = min(5, 3 + 灵魂疾行等级)"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "RESOURCE",
+          "resource": "耀魂值",
+          "amount": 20,
+          "note": {
+            "zh_cn": "getProudSoulCost()，每把刀可不同"
+          }
+        },
+        {
+          "type": "DURABILITY",
+          "amount": 1,
+          "note": {
+            "zh_cn": "耀魂值不足时改为扣 1 点耐久"
+          }
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 9,
+        "sustainTicks": 47,
+        "note": "★ 前摇 = 9（= ISlashBladeState.java:277-279 getFullChargeTicks 默认 9；SlashArts.java:34-36 ChargeTicks = 9）+ justSpan 1~5 的 Jackpot 窗口（:47-49 min(5, 3+灵魂疾行)）；松手那一帧结算（ItemSlashBlade.java:372,379 releaseUsing → doChargeAction）。★ 持续段 = 交接到的 ComboState（默认 judgement_cut 全链 47）。⚠️ 源码里【不存在】「SA 时长」这个字段。换算律 durTicks = floor(getTimeoutMS()/50) + 1（ComboState.java:81 的 getTimeoutMS + ISlashBladeState.java:389 的严格小于判定）"
+      },
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RA",
+      "reachEntry": "ISlashBladeState#doChargeAction(LivingEntity, int elapsed) -> getSlashArts().doArts(ArtsType, LivingEntity) -> 新的 ComboState id",
+      "existingImpl": "万法皆通 SlashBladeProvider#triggerSlashArt / hasSlashArt(ItemStack)",
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ItemSlashBlade.java:212-214,400-416,371-398",
+          "note": "getUseDuration=72000；onUseTick 只做 holdAction + 蓄力粒子（不触发 SA）；★ releaseUsing -> doChargeAction 才是 SA 触发点"
+        },
+        {
+          "level": "verified",
+          "cite": "slasharts/SlashArts.java:34-36,47-48",
+          "note": "ChargeTicks=9；ChargeJustTicks=3 与 ChargeJustTicksMax=5 均被字面量绕过（死代码）"
+        },
+        {
+          "level": "verified",
+          "cite": "slasharts/SlashArts$ArtsType",
+          "note": "Fail | Success | Jackpot | Super"
+        },
+        {
+          "level": "verified",
+          "cite": "registry/SlashArtsRegistry",
+          "note": "9 个 DeferredRegister 注册项，与 lang 的 slash_art.slashblade.* 完全对应"
+        }
+      ],
+      "note": {
+        "zh_cn": "★★ 这一族是【参数化机制的示范条目】：① SA 是【一个操作】（按住右键松手）而不是 9 个动作；② 具体是哪一种 SA 由【物品数据】决定且【运行时可变】⇒ 只能解析、不能写死；③ 战术价值按 9 种 SA 覆写 vectorOverrides，【工作量有界】。它同时是「分散坑」的实例：触发方式不在 22 条成就里，藏在 releaseUsing 里。设计见 docs/09 §4.5。"
+      },
+      "preconditions": [
+        {
+          "type": "spellConditionsMet",
+          "fact": "slashblade:has_slash_art",
+          "note": {
+            "zh_cn": "★★ 2026-10-03 补（解析期）：主手这把刀**必须真的配了 SA**（`ISlashBladeState#getSlashArtsKey` 非 NONE）。此前这条只在执行期判 ⇒ 没配 SA 的刀也会进候选、每次失败、被连败退避停放，观感就是\"下了指令什么都没发生\"。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slashblade:super_slash_art",
+      "kind": "atomic",
+      "carrier": "slashblade:blade",
+      "sourceMod": "slashblade",
+      "familyOf": "slashblade:slash_art",
+      "displayName": {
+        "zh_cn": "超级刀技（SSA）",
+        "en_us": "Super Slash Art"
+      },
+      "preconditions": [
+        {
+          "type": "hasItem",
+          "note": {
+            "zh_cn": "刀为 BEWITCHED（妖刀）且带 FIERCEREDGE 附魔"
+          }
+        },
+        {
+          "type": "custom",
+          "note": {
+            "zh_cn": "击杀数 ≥ 1000"
+          }
+        }
+      ],
+      "stateReq": [
+        {
+          "type": "GROUND",
+          "note": {
+            "zh_cn": "地面按住 special_move 键 20 tick"
+          }
+        }
+      ],
+      "cost": [
+        {
+          "type": "DURABILITY",
+          "note": {
+            "zh_cn": "消耗最大耐久的一半"
+          }
+        }
+      ],
+      "effects": [
+        {
+          "type": "DAMAGE"
+        }
+      ],
+      "reach": "RC",
+      "reachNote": {
+        "zh_cn": "★ 执行入口 SuperSlashArts.releaseSSA(net.minecraft.server.level.ServerPlayer) —— 参数类型写死为 ServerPlayer，服务端 mob 无法直接调用。若必须支持，需按 SSA 效果自行重写（R-B）"
+      },
+      "evidence": [
+        {
+          "level": "verified",
+          "cite": "ability/SuperSlashArts.java（javap：releaseSSA(ServerPlayer)、onInputChange(InputCommandEvent)）"
+        },
+        {
+          "level": "verified",
+          "cite": "assets/slashblade/lang/zh_cn.json 等成就文本"
+        }
+      ],
+      "duration": {
+        "kind": "CHANNEL",
+        "chargeTicks": 20,
+        "sustainTicks": 27,
+        "note": "★ 前摇 20（SuperSlashArts.java:94 schedule(pressTime + 20L)）+ 持续 27（JUDGEMENT_CUT_END → judgement_cut_sheath 链：ComboStateRegistry.java:337）。"
+      }
+    }
+  ]
+}

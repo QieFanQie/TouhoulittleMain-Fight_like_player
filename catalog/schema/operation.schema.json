@@ -1,0 +1,583 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://touhoulittlemad.invalid/player_like_routine/operation.schema.json",
+  "title": "女仆原子动作（Operation / ActionFamily）",
+  "description": "「类玩家」战斗模式的操作清单条目。一个文件可含多条；族（family）用 params 声明参数域，实例（instance）用 familyOf 指回族。字段语义见 docs/07-清单数据格式.md。",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "operations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "清单数据格式版本。不兼容变更时递增。"
+    },
+    "generatedFrom": {
+      "type": "string",
+      "description": "可选：本条数据的来源说明（文档章节 / 脚本 / 人工）。"
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+:[a-z0-9_/]+$",
+      "description": "稳定标识，命名空间:路径（小写）。决策层用它点名。"
+    },
+    "operation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "carrier",
+        "sourceMod",
+        "reach",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "atomic",
+            "family"
+          ],
+          "description": "atomic = 可直接选中的单个动作；family = 参数化动作族（其实例见 familyOf 指回的条目）"
+        },
+        "role": {
+          "enum": [
+            "choice",
+            "maintenance",
+            "stance",
+            "passive",
+            "mechanism"
+          ],
+          "default": "choice",
+          "description": "★ 动作在决策层的角色（单位粒度对齐，见 docs/09 §2.4）。choice=决策层会主动选的战术动作（默认）；maintenance=维护步骤，由执行器自动完成、决策层不选（换弹/拉栓）；stance=持续姿态/配置，作为契合度乘数或状态而非动作（ADS 瞄准 / 切射击模式）；passive=由引擎【自动附带】的效果，不是独立选择（横扫、灭火器附伤 —— 它们与近战是同一次调用，见 EntityMaid#doHurtTarget）。⚠️ 非 choice 的动作不进候选集，否则会让决策层去选「没有战术价值」的东西，污染评分空间。；mechanism=机制/许可门/UI/资源规则，【本体不是动作】（保留在清单里作知识记录，永不进候选）"
+        },
+        "vectorProvenance": {
+          "enum": [
+            "authored",
+            "heuristic",
+            "measured"
+          ],
+          "default": "authored",
+          "description": "★ vector 的来源，供后续校准用。authored=人工判断值；heuristic=按规则批量推导的初值（待人工复核）；measured=用实测数据反推（M5 之后）。见 docs/09 §6。"
+        },
+        "familyOf": {
+          "$ref": "#/$defs/id",
+          "description": "当 kind=atomic 且本条目是某族的实例时填写。"
+        },
+        "carrier": {
+          "$ref": "#/$defs/id",
+          "description": "载体：决定「此刻有哪些操作可用」。物品 ID / 模式 UID / 虚拟载体（如 maid:body）。"
+        },
+        "sourceMod": {
+          "type": "string",
+          "description": "提供方 modid。用于清单剪枝：未装该模组则整族不出现。"
+        },
+        "displayName": {
+          "$ref": "#/$defs/i18n"
+        },
+        "summary": {
+          "$ref": "#/$defs/i18n"
+        },
+        "params": {
+          "type": "object",
+          "description": "仅 kind=family：参数名 → 取值域。避免「120 个聚晶 = 120 条记录」的组合爆炸。",
+          "additionalProperties": {
+            "$ref": "#/$defs/domain"
+          }
+        },
+        "preconditions": {
+          "type": "array",
+          "description": "★ 必须服务端可判定的谓词。缺省意味着「随时可用」，属危险默认，需在 note 中说明。",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "stateReq": {
+          "type": "array",
+          "description": "所需实体/世界状态（从玩家侧触发语法的「状态谓词」部分继承）。",
+          "items": {
+            "$ref": "#/$defs/state"
+          }
+        },
+        "cost": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cost"
+          }
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "durationOverrides": {
+          "type": "object",
+          "description": "★ 按参数取值覆写 duration。仅用于「参数取值确实改变承诺形状」的场合（决策层对待它的方式不同）。例：tacz:shoot 的 fireMode=AUTO ⇒ CHANNEL（持续射击），SEMI ⇒ INSTANT（一发），BURST ⇒ COMMIT（一轮连发）。★ 不要把【定量】差异写在这里 —— 那属于 vectorOverrides。见 docs/09 §2.4。",
+          "additionalProperties": {
+            "$ref": "#/$defs/duration"
+          }
+        },
+        "interruptible": {
+          "$ref": "#/$defs/interruptible"
+        },
+        "cooldownTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "★ 最小重复间隔（tick）：这招做完之后隔多久才允许再做。承诺时长只回答「这一次做完没有」，不足以表达节奏 —— 瞬时动作（承诺=0）若不写它，决策层每个周期都会重新选中同一招，表现为「4 次/秒刷屏」。缺省由 ActionSpec#effectiveCooldownTicks 兜底为 max(承诺时长, 20)。"
+        },
+        "comboDeps": {
+          "type": "array",
+          "description": "组合动作（L2）的前置依赖：必须刚做过哪个动作、在什么 tick 窗口内。",
+          "items": {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "$ref": "#/$defs/id"
+              },
+              "withinTicks": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "description": "[最小, 最大] 相对 tick 窗口（含端点）。"
+              },
+              "note": {
+                "$ref": "#/$defs/i18n"
+              }
+            }
+          }
+        },
+        "exclusivity": {
+          "type": "array",
+          "description": "★ 互斥占用组。例：「同时只能装 1 本法术书」（铁魔法）、召唤位、主手法杖。缺失会导致决策层选中互斥组合。",
+          "items": {
+            "type": "object",
+            "required": [
+              "group"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "type": "string"
+              },
+              "slots": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              },
+              "scope": {
+                "enum": [
+                  "maid",
+                  "item",
+                  "world"
+                ],
+                "default": "maid"
+              },
+              "note": {
+                "$ref": "#/$defs/i18n"
+              }
+            }
+          }
+        },
+        "effects": {
+          "type": "array",
+          "description": "可观测效果。与战报项目（fight_feed_back）的对接面。",
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        },
+        "vector": {
+          "$ref": "#/$defs/needVector",
+          "description": "★ 需求空间向量 v_x（「这招在战术上值多少」）。手写，不能自动推导。省略的轴视为 0。族上写默认值，实例上写自己的值。详见 docs/09 §3.2 / §4.5.3。"
+        },
+        "vectorOverrides": {
+          "type": "object",
+          "description": "★ 按参数取值覆写向量。键 = params 里某个参数的取值（如 slashArtsType 的 judgement_cut）。用于「同一操作、不同物品 ⇒ 战术价值不同」的情况。见 docs/09 §4.5。",
+          "additionalProperties": {
+            "$ref": "#/$defs/needVector"
+          }
+        },
+        "reach": {
+          "enum": [
+            "RA",
+            "RB",
+            "RC"
+          ],
+          "description": "RA=服务端有公开入口可直调；RB=可组合复现；RC=本质依赖客户端或 Player 身份（不进清单主体）"
+        },
+        "reachNote": {
+          "$ref": "#/$defs/i18n"
+        },
+        "reachEntry": {
+          "type": "string",
+          "description": "RA 时的服务端入口签名；RB 时的复现路径要点。"
+        },
+        "existingImpl": {
+          "type": "string",
+          "description": "已知的既有实现（如万法皆通的 DirectSkill 名、调律师的类名）。留空=无。"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "family"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ]
+          }
+        }
+      ]
+    },
+    "domain": {
+      "type": "object",
+      "description": "参数取值域。三种形态：枚举 values / 连续 range / 外部引用 ref。★ ref 与 values 可以并存：ref 是「开放来源」（如全部已注册聚晶），values 是「当前快照」，便于交叉校验与离线编辑。",
+      "additionalProperties": false,
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "range": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "integer": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "ref": {
+          "type": "string",
+          "description": "开放式取值域的外部来源（如「全部已注册聚晶」「全部 IChargingSpell 实现」）。★ 用接口/注册表闭包代替手写清单的关键。"
+        },
+        "count": {
+          "type": "integer",
+          "description": "实测到的取值个数（便于与 ref 交叉校验）。"
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "values"
+          ]
+        },
+        {
+          "required": [
+            "range"
+          ]
+        },
+        {
+          "required": [
+            "ref"
+          ]
+        }
+      ]
+    },
+    "needVector": {
+      "type": "object",
+      "description": "需求空间向量 v_x。★ 8 个轴与 Java 侧 NeedAxis 枚举一一对应（顺序即分量顺序，新增轴只能追加在末尾）。★ 正 = 满足该需求，负 = 制造该需求（代价 —— 收益与代价用同一向量的正负号表达）。省略的轴 = 0。★★ MOBILITY 是【唯一有向轴】且【不是代价轴】：正 = 想靠近、负 = 想远离，两边的负值都是真实需求，因此 p 的该分量允许为负。见 docs/09 §3.1–§3.2。⚠️ 本表曾与 Java 侧不一致（把 SELF_SURVIVAL 拆成 HEAL_SURVIVAL / MITIGATION_SURVIVAL 后未同步），已于 2026-09-30 对齐；轴名对账由 tools/check_axis_names.py 守住。",
+      "additionalProperties": false,
+      "properties": {
+        "SINGLE_DAMAGE": {
+          "type": "number",
+          "description": "解决单个目标"
+        },
+        "AREA_DAMAGE": {
+          "type": "number",
+          "description": "压制一群目标"
+        },
+        "HEAL_SURVIVAL": {
+          "type": "number",
+          "description": "★ 靠【回血】活下去（治疗/吸血）。与 MITIGATION_SURVIVAL 拆开，因为「该吃治疗」与「该举盾」是两个不同的判断"
+        },
+        "MITIGATION_SURVIVAL": {
+          "type": "number",
+          "description": "★ 靠【不被打到】活下去（格挡/闪避/减伤）。负值 = 该动作有暴露代价"
+        },
+        "CONTROL": {
+          "type": "number",
+          "description": "限制敌方行动自由"
+        },
+        "MOBILITY": {
+          "type": "number",
+          "description": "★ 唯一【有向轴】：正 = 靠近、负 = 远离。⚠️ 注意：持续走位不由动作层承担（见 docs/04 Q18 的「步法」），因为位移是伺服误差而非可消费的需求"
+        },
+        "REINFORCE": {
+          "type": "number",
+          "description": "增加己方战力（召唤/仆从/增益）—— ★ 不含回血"
+        },
+        "ALLY_CARE": {
+          "type": "number",
+          "description": "照顾主人/友方"
+        }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "hasItem",
+            "hasEnchantment",
+            "hasServant",
+            "hasTarget",
+            "resourceAtLeast",
+            "spellConditionsMet",
+            "custom"
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "GROUND",
+            "AERIAL",
+            "MOVING",
+            "NOT_MOVING",
+            "SNEAKING",
+            "SHEATHED",
+            "NEAR_ENEMY",
+            "NEAR_WALL",
+            "HAS_TARGET",
+            "TARGET_IN_VIEW",
+            "SERVANT_SELECTED",
+            "BUFF",
+            "AFTER",
+            "TIMING_WINDOW"
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "DURABILITY",
+            "RESOURCE",
+            "AMMO",
+            "SUMMON_SLOT",
+            "HUNGER",
+            "XP",
+            "COOLDOWN",
+            "CHARGE_TIME",
+            "MANA",
+            "NONE",
+            "UNKNOWN"
+          ]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "duration": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "INSTANT",
+            "COMMIT",
+            "CHANNEL"
+          ],
+          "description": "INSTANT=瞬时；COMMIT=多 tick 承诺（期间不可另起动作）；CHANNEL=可持续引导"
+        },
+        "ticks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "chargeTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "CHANNEL 时：蓄力段"
+        },
+        "sustainTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "CHANNEL 时：持续段"
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "interruptible": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "boolean"
+        },
+        "windowTicks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cancelAfterTicks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "DAMAGE",
+            "HEAL",
+            "DISPLACE",
+            "SUMMON",
+            "DESPAWN",
+            "APPLY_EFFECT",
+            "REMOVE_EFFECT",
+            "SET_AI_STATE",
+            "TELEPORT",
+            "TERRAIN",
+            "OBSERVABLE_ONLY"
+          ],
+          "description": "★ 必须能表达「改变目标实体的行为模式」（SET_AI_STATE）——仆从管理类操作属于这一类，而不是造成伤害"
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "verified",
+            "inferred",
+            "unverified",
+            "doc_mismatch"
+          ],
+          "description": "verified=已查证（读了源码/字节码/注册表）；inferred=推断；unverified=未能查证；doc_mismatch=文档与代码不一致（以代码为准）"
+        },
+        "cite": {
+          "type": "string",
+          "description": "出处：file:line / class#method / lang key / 脚本产物"
+        },
+        "note": {
+          "$ref": "#/$defs/i18n"
+        }
+      }
+    },
+    "i18n": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "pattern": "^[a-z]{2}(_[a-z]{2})?$"
+          }
+        }
+      ]
+    }
+  }
+}
